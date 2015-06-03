@@ -1,5 +1,5 @@
 //
-//
+// giphy API logic
 //
 
 package gitcha
@@ -11,6 +11,7 @@ import (
 
 const (
 	giphyAPI        = "https://api.giphy.com"
+	giphyVer        = "v1"
 	captchaEndpoint = "captcha"
 	keyLen          = 128
 	secLen          = keyLen >> 1
@@ -21,62 +22,99 @@ var (
 	ErrNameExists  = errors.New("name exists")
 )
 
-type gitchaApp struct {
+type GtchaApp struct {
 	Name string `json:"name,omitempty"`
-
-	// ID is the public key of an app for use in its front-end.
-	ID string `json:"id"`
 
 	// Secret is an app's secret key.
 	Secret string `json:"secret,omitempty"`
+
+	// public key of an app for use in its front-end.
+	APIKey string `json:"api_key,omitempty"`
+
+	Domains []string `json:"domains,omitempty"`
 }
 
-// NewApp allocates a new app and sets its ID and secret based on the name.
-// The logic for checking that the name is new and the right length is outside of this
-// function, as it simplifies testing.
-func NewApp(name string) (*gitchaApp, error) {
-	app := new(gitchaApp)
-	app.Name = name
+type Captcha struct {
+	ID     string   `json:"id,omitempty"`
+	Tag    string   `json:"tag"`
+	Images []string `json:"images"`
+}
 
-	if err := app.genSecret(); err != nil {
+type gtcha struct {
+	id    string
+	tag   string
+	in    []string
+	out   []string
+	maybe []string
+}
+
+func newGtcha() (*gtcha, error) {
+	tag, err := genTag()
+	if err != nil {
 		return nil, err
 	}
 
-	if err := app.genID(); err != nil {
+	in, err := getImagesTagged(tag)
+	if err != nil {
 		return nil, err
 	}
 
-	return app, nil
+	out, err := getImagesNotTagged(tag)
+	if err != nil {
+		return nil, err
+	}
+
+	maybe, err := getImagesMaybeTagged(tag)
+	if err != nil {
+		return nil, err
+	}
+
+	g := &gtcha{
+		tag:   tag,
+		in:    in,
+		out:   out,
+		maybe: maybe,
+	}
+
+	return g, nil
 }
 
-// genSecret resets an app's secret based on its name.
-func (app *gitchaApp) genSecret() error {
-	if app.Name == "" {
-		return errors.New("app has no name")
+func (g *gtcha) toCaptcha() *Captcha {
+	imgs := make([]string, 0, len(g.in)+len(g.out)+len(g.maybe))
+	for _, l := range [][]string{g.in, g.out, g.maybe} {
+		for _, img := range l {
+			imgs = append(imgs, img)
+		}
 	}
 
-	sec, err := genSecret(app.Name)
-	if err != nil {
-		return err
+	return &Gtcha{
+		ID:     g.id,
+		Tag:    g.tag,
+		Images: imgs,
 	}
-
-	app.Secret = sec
-
-	return nil
 }
 
-// genID resets an app's ID based on it's secret key.
-func (app *gitchaApp) genID() error {
-	if app.Secret == "" {
-		return errors.New("app has no secret")
-	}
+func getImagesTagged(tag string) ([]string, error) {
+	return nil, nil
+}
 
-	id, err := genSecret(app.Secret)
+func getImagesNotTagged(tag string) ([]string, error) {
+	otag, err := getOtherTag(tag)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	app.ID = id
+	return getImagesTagged(otag)
+}
 
-	return nil
+func getOtherTag(tag string) (string, error) {
+	otag := tag
+	for otag == tag {
+		otag, err := genTag()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return otag, nil
 }

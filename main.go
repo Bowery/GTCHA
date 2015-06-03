@@ -1,20 +1,27 @@
 //
-// HTTP and appengine logic
+// HTTP and appengine code
 //
 
 package gitcha
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
+
+	"code.google.com/p/go-uuid/uuid"
 
 	"appengine"
 	"appengine/datastore"
+	"appengine/urlfetch"
 )
 
 func init() {
-	http.HandleFunc("/", captchaHndlr)
+	http.HandleFunc("/", getCaptcha)
+	http.HandleFunc("/verify", verifySession)
 	http.HandleFunc("/register", registerApp) // requires unique name. returns id and secret
 }
 
@@ -32,48 +39,52 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := appengine.NewContext(r)
-	name := r.PostForm.Get("name")
-	switch err := CheckName(c, name); err {
-	case nil:
-		break
-	case ErrNameExists:
-		http.Error(w, err.Error(), http.StatusConflict)
-		return
-	case ErrNameTooLong:
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	key := datastore.NewKey(c, "GtchaApp", uuid.New(), 0, nil)
+	fmt.Fprintf(w, "key %#v\n", key)
+
+	app := &GtchaApp{
+		Name:    r.PostForm.Get("name"),
+		Secret:  key.StringID(),
+		APIKey:  uuid.New(),
+		Domains: strings.Split(r.PostForm.Get("domains"), "\n"),
 	}
 
-	app, err := NewApp(name)
+	if _, err := datastore.Put(c, key, app); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res, err := json.Marshal(app)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = SaveApp(c, app)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(res)
 }
 
-func captchaHndlr(w http.ResponseWriter, r *http.Request) {
+func getCaptcha(w http.ResponseWriter, r *http.Request) {
+	corsHeaders(w)
 	m := r.Method
+	if m == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	if m != "GET" && m != "POST" {
 		http.Error(w, fmt.Sprintf("Method %s not allowed", m), http.StatusMethodNotAllowed)
 		return
 	}
 
 	c := appengine.NewContext(r)
-	id := r.URL.Query().Get("id")
+	id := r.URL.Query().Get("api_key")
 
 	if id == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	app, err := GetApp(c, id)
+	app, err := GetApp(c, id, r.Header.Get("Origin"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -83,76 +94,62 @@ func captchaHndlr(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var res *http.Response
-	switch m {
-	case "GET":
-		res, err = http.Get(fmt.Sprintf("%s/%s", giphyAPI, captchaEndpoint))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	default: // "POST"
-		if err = r.ParseForm(); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if sec := r.Form.Get("secret"); sec != app.Secret {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+	httpC := urlfetch.Client(c)
 
-		var req *http.Request
-		req, err = http.NewRequest(
-			"POST", fmt.Sprintf("%s/%s", giphyAPI, captchaEndpoint), r.Body,
-		)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	// TODO(r-medina): actually make a captcha
+	//
+	// Requests:
+	//     - GET /tag/random
+	//     - GET /images/tag
+	//     - GET /images/NOTtag
+	//     - GET /images/tag/maybe
+	//     - POST tag + picture id if human
+	//
+	// Process:
+	//     -
 
-		req.Header.Set("Content-Type", "application/json")
-		res, err = http.DefaultClient.Do(req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	url := fmt.Sprintf(
+		"%s/%s/%s", giphyAPI, giphyVer, "/gifs/search?q=funny+cat&api_key=dc6zaTOxFJmzC",
+	)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res, err := httpC.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	io.Copy(w, res.Body)
 }
 
+func verifySession(w http.ResponseWriter, r *http.Request) {}
+
+func corsHeaders(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+}
+
 // GetApp returns an app entity from the appengine datastore.
-func GetApp(c appengine.Context, id string) (*gitchaApp, error) {
-	q := datastore.NewQuery("App").Filter("id =", id).Limit(1)
-	app := new(gitchaApp)
-	_, err := q.Run(c).Next(app)
-
-	return app, err
-}
-
-// SaveApp commits an app to a new entity in the appengine datastore.
-func SaveApp(c appengine.Context, app *gitchaApp) error {
-	key := datastore.NewKey(c, "gitchaApp", app.Secret, 0, nil)
-	_, err := datastore.Put(c, key, app)
-
-	return err
-}
-
-// CheckName checks that the name is unique and of the right length.
-func CheckName(c appengine.Context, name string) error {
-	if n := len(name); n > keyLen {
-		return ErrNameTooLong
-	}
-
-	q := datastore.NewQuery("App").Filter("name =", name).Limit(1)
-	app := new(gitchaApp)
+func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
+	q := datastore.NewQuery("GtchaApp").Filter("APIKey =", id).Limit(1)
+	app := new(GtchaApp)
 	if _, err := q.Run(c).Next(app); err != nil {
-		return err
+		return nil, err
 	}
-	if app != nil {
-		return ErrNameExists
+	ok := false
+	for _, domain := range app.Domains {
+		if origin == domain {
+			ok = true
+		}
+	}
+	if !ok {
+		return nil, errors.New("invalid origin")
 	}
 
-	return nil
+	return app, nil
 }
