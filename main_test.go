@@ -1,4 +1,4 @@
-package gitcha
+package gtcha
 
 import (
 	"log"

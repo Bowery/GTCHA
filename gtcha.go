@@ -115,7 +115,7 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	return g, nil
 }
 
-func (g *gtcha) toCaptcha() *Captcha {
+func (g *gtcha) toCaptcha(id string) *Captcha {
 	imgs := make([]string, 0, len(g.In)+len(g.Out)+len(g.Maybe))
 	for _, l := range [][]string{g.In, g.Out, g.Maybe} {
 		for _, img := range l {
@@ -124,6 +124,7 @@ func (g *gtcha) toCaptcha() *Captcha {
 	}
 
 	return &Captcha{
+		ID:     id,
 		Tag:    g.Tag,
 		Images: imgs,
 	}
