@@ -2,14 +2,14 @@
 // HTTP and appengine code
 //
 
-package gitcha
+package gtcha
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"code.google.com/p/go-uuid/uuid"
@@ -20,19 +20,12 @@ import (
 )
 
 func init() {
-	http.HandleFunc("/", getCaptcha)
-	http.HandleFunc("/verify", verifySession)
-	http.HandleFunc("/register", registerApp) // requires unique name. returns id and secret
+	handle("/captcha", getCaptcha, "GET")
+	handle("/verify", verifySession, "PUT")
+	handle("/register", registerApp, "POST")
 }
 
 func registerApp(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(
-			w, fmt.Sprintf("Method %s not allowed", r.Method), http.StatusMethodNotAllowed,
-		)
-		return
-	}
-
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -42,11 +35,22 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	key := datastore.NewKey(c, "GtchaApp", uuid.New(), 0, nil)
 	fmt.Fprintf(w, "key %#v\n", key)
 
+	// clean up origin domains
+	domains := strings.Split(r.PostForm.Get("domains"), "\n")
+	for i, domain := range domains {
+		origin, err := url.Parse(domain)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		domains[i] = origin.Host
+	}
+
 	app := &GtchaApp{
 		Name:    r.PostForm.Get("name"),
 		Secret:  key.StringID(),
 		APIKey:  uuid.New(),
-		Domains: strings.Split(r.PostForm.Get("domains"), "\n"),
+		Domains: domains,
 	}
 
 	if _, err := datastore.Put(c, key, app); err != nil {
@@ -65,74 +69,47 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func getCaptcha(w http.ResponseWriter, r *http.Request) {
-	corsHeaders(w)
-	m := r.Method
-	if m == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	if m != "GET" && m != "POST" {
-		http.Error(w, fmt.Sprintf("Method %s not allowed", m), http.StatusMethodNotAllowed)
-		return
-	}
-
 	c := appengine.NewContext(r)
-	id := r.URL.Query().Get("api_key")
+	apiKey := r.URL.Query().Get("api_key")
 
-	if id == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	if apiKey == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	app, err := GetApp(c, id, r.Header.Get("Origin"))
+	origin, err := url.Parse(r.Header.Get("Origin"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	app, err := GetApp(c, apiKey, origin.Host)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if app == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	httpC := urlfetch.Client(c)
-
-	// TODO(r-medina): actually make a captcha
-	//
-	// Requests:
-	//     - GET /tag/random
-	//     - GET /images/tag
-	//     - GET /images/NOTtag
-	//     - GET /images/tag/maybe
-	//     - POST tag + picture id if human
-	//
-	// Process:
-	//     -
-
-	url := fmt.Sprintf(
-		"%s/%s/%s", giphyAPI, giphyVer, "/gifs/search?q=funny+cat&api_key=dc6zaTOxFJmzC",
-	)
-	req, err := http.NewRequest("GET", url, nil)
+	g, err := newGtcha(httpC)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	res, err := httpC.Do(req)
+	buf, err := json.Marshal(g.toCaptcha())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	io.Copy(w, res.Body)
+	w.Write(buf)
 }
 
 func verifySession(w http.ResponseWriter, r *http.Request) {}
-
-func corsHeaders(w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-}
 
 // GetApp returns an app entity from the appengine datastore.
 func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
@@ -141,6 +118,7 @@ func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
 	if _, err := q.Run(c).Next(app); err != nil {
 		return nil, err
 	}
+
 	ok := false
 	for _, domain := range app.Domains {
 		if origin == domain {
@@ -148,7 +126,7 @@ func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
 		}
 	}
 	if !ok {
-		return nil, errors.New("invalid origin")
+		return nil, errors.New("bad origin")
 	}
 
 	return app, nil
