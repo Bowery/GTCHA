@@ -62,9 +62,7 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	processImages := func(fn func(*http.Client, string, int) ([]*giphy.Image, error)) []string {
 		apiImgs, err := fn(c, tag, 0)
 		if err != nil {
-			errOnce.Do(func() {
-				errCh <- err
-			})
+			errOnce.Do(func() { errCh <- err })
 		}
 		imgs := make([]string, len(apiImgs))
 		for i, img := range apiImgs {
@@ -93,9 +91,7 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 
 	go func() {
 		wg.Wait()
-		errOnce.Do(func() {
-			errCh <- nil
-		})
+		errOnce.Do(func() { errCh <- nil })
 	}()
 
 	err = <-errCh

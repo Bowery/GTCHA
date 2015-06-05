@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"code.google.com/p/go-uuid/uuid"
 
@@ -143,7 +144,70 @@ func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
 
 // GetGtcha looks for the captcha with the given ID in memcache and datastore.
 func GetGtcha(c appengine.Context, id string) (*gtcha, error) {
-	return nil, nil
+	var (
+		o     sync.Once
+		wg    sync.WaitGroup
+		gCh   = make(chan *gtcha)
+		errCh = make(chan error)
+	)
+
+	//
+	// This has to solve the following problem:
+	//
+	// You have two routines trying to get data. You want to return the data returned on a
+	// successful call and you only want to send an error once both routines have errored.
+	//
+	// We mostly solve this by using a waitgroup, but this also requires some additional
+	// machinery. We send the completed data over a channel and then select on that
+	// channel and another channel that sends an error (if there is one) once the
+	// waitgroup is finished.
+	//
+
+	wg.Add(2)
+
+	// memcache
+	go func() {
+		defer wg.Done()
+		item, err := memcache.Get(c, id)
+		if err != nil {
+			return
+		}
+
+		g := new(gtcha)
+		if err = json.Unmarshal(item.Value, g); err != nil {
+			return
+		}
+
+		o.Do(func() { gCh <- g })
+	}()
+
+	// datastore
+	go func() {
+		defer wg.Done()
+		key := datastore.NewKey(c, "Gtcha", id, 0, nil)
+		g := new(gtcha)
+		if err := datastore.Get(c, key, g); err != nil {
+			errCh <- err
+			return
+		}
+
+		o.Do(func() { gCh <- g })
+		errCh <- nil
+	}()
+
+	eCh := make(chan error)
+	go func() {
+		err := <-errCh
+		wgErr.Wait()
+		o.Do(func() { eCh <- err })
+	}()
+
+	select {
+	case g := <-gCh:
+		return g, nil
+	case err := <-errBufCh:
+		return nil, err
+	}
 }
 
 // SaveGtcha saves a gtcha in the database and memcache.
@@ -161,7 +225,7 @@ func SaveGtcha(c appengine.Context, g *gtcha, id string) error {
 		})
 	}()
 
-	key := datastore.NewKey(c, "Captcha", id, 0, nil)
+	key := datastore.NewKey(c, "Gtcha", id, 0, nil)
 	if _, err := datastore.Put(c, key, g); err != nil {
 		return err
 	}
