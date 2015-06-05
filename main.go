@@ -7,16 +7,17 @@ package gtcha
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"code.google.com/p/go-uuid/uuid"
-	"golang.org/x/net/context"
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/memcache"
-	"google.golang.org/appengine/urlfetch"
+
+	"appengine"
+	"appengine/datastore"
+	"appengine/memcache"
+	"appengine/urlfetch"
 )
 
 func init() {
@@ -32,13 +33,14 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// clean up origin domains
-	c := appengine.NewContext(r)
-	key := datastore.NewKey(c, "GtchaApp", uuid.New(), 0, nil)
-	domains, err := ParseDomains(r.PostForm.Get("domains"))
+	domains, err := parseDomains(r.PostForm.Get("domains"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	c := appengine.NewContext(r)
+	key := datastore.NewKey(c, "GtchaApp", uuid.New(), 0, nil)
 	app := &GtchaApp{
 		Name:    r.PostForm.Get("name"),
 		Secret:  key.StringID(),
@@ -75,7 +77,12 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := appengine.NewContext(r)
-	app, err := GetApp(c, apiKey, origin.Host)
+	var app *GtchaApp
+	if url := origin.Host; url != "" {
+		app, err = GetApp(c, apiKey, origin.Host)
+	} else {
+		app, err = GetApp(c, apiKey, origin.Path)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -114,7 +121,7 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 func verifySession(w http.ResponseWriter, r *http.Request) {}
 
 // GetApp returns a GtchaApp entity from the appengine datastore.
-func GetApp(c context.Context, id, origin string) (*GtchaApp, error) {
+func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
 	q := datastore.NewQuery("GtchaApp").Filter("APIKey =", id).Limit(1)
 	app := new(GtchaApp)
 	if _, err := q.Run(c).Next(app); err != nil {
@@ -134,28 +141,13 @@ func GetApp(c context.Context, id, origin string) (*GtchaApp, error) {
 	return app, nil
 }
 
-// ParseDomains takes the raw user input string for their app origins
-// and makes it a slice of strings that are just the host.
-func ParseDomains(raw string) ([]string, error) {
-	domains := strings.Split(raw, "\n")
-	for i, domain := range domains {
-		origin, err := url.Parse(domain)
-		if err != nil {
-			return nil, err
-		}
-		domains[i] = origin.Host
-	}
-
-	return domains, nil
-}
-
 // GetGtcha looks for the captcha with the given ID in memcache and datastore.
-func GetGtcha(c context.Context, id string) (*gtcha, error) {
+func GetGtcha(c appengine.Context, id string) (*gtcha, error) {
 	return nil, nil
 }
 
 // SaveGtcha saves a gtcha in the database and memcache.
-func SaveGtcha(c context.Context, g *gtcha, id string) error {
+func SaveGtcha(c appengine.Context, g *gtcha, id string) error {
 	// put g in memcache
 	go func() {
 		buf, err := json.Marshal(g)
@@ -175,4 +167,53 @@ func SaveGtcha(c context.Context, g *gtcha, id string) error {
 	}
 
 	return nil
+}
+
+var errEmptyDomain = errors.New("domain empty")
+
+// parseDomains takes the raw user input string for their app origins
+// and makes it a slice of strings that are just the host.
+// Properly formatted domains should include scheme and be separated by newlines
+// eg:
+//     http://bowery.io
+//
+//     http://localhost:8080
+//
+// Empty lines will be removed.
+func parseDomains(raw string) ([]string, error) {
+	var domains []string
+	rawDomains := strings.Split(raw, "\n")
+	for _, domain := range rawDomains {
+		url, err := parseDomain(domain)
+		if err == errEmptyDomain {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		domains = append(domains, url)
+	}
+
+	return domains, nil
+}
+
+// parseDomain parses and individual line of user input. See documentation for `parseDomains`.
+func parseDomain(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", errEmptyDomain
+	}
+	origin, err := url.Parse(raw)
+	if err != nil {
+		return "", err
+	}
+
+	if domain := origin.Host; domain != "" { // handles cases like http://bowery.io
+		return domain, nil
+	} else if domain = origin.Path; domain != "" {
+		return domain, nil
+	}
+
+	return "", fmt.Errorf("bad origin '%s'", raw)
 }
