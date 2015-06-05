@@ -37,7 +37,8 @@ func TestGetApp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	<-time.After(500 * time.Millisecond) // to guarantee that app goes in the datastore
+	// increases likelihood that app goes in the datastore before call to Get
+	<-time.After(500 * time.Millisecond)
 
 	retApp, err := GetApp(c, app.APIKey, "bowery.io")
 	if err != nil {
