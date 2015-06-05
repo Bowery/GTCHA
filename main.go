@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"code.google.com/p/go-uuid/uuid"
+	"golang.org/x/net/context"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/memcache"
@@ -33,14 +34,18 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	// clean up origin domains
 	c := appengine.NewContext(r)
 	key := datastore.NewKey(c, "GtchaApp", uuid.New(), 0, nil)
+	domains, err := ParseDomains(r.PostForm.Get("domains"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	app := &GtchaApp{
 		Name:    r.PostForm.Get("name"),
 		Secret:  key.StringID(),
 		APIKey:  uuid.New(),
-		Domains: ParseDomains(r.PostForm.Get("domains")),
+		Domains: domains,
 	}
-
-	if _, err = datastore.Put(c, key, app); err != nil {
+	if _, err := datastore.Put(c, key, app); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -89,24 +94,14 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	id := uuid.New()
-	captcha := g.toCaptcha(id)
-	buf, err := json.Marshal()
+	captcha := g.toCaptcha()
+	buf, err := json.Marshal(captcha)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// put buf in memcache
-	go func() {
-		memcache.Add(c, &memcache.Item{
-			Key:   id,
-			Value: buf,
-		})
-	}()
-
-	key := datastore.NewKey(c, "Captcha", id, 0, nil)
-	if _, err = datastore.Put(c, key, captcha); err != nil {
+	if err = SaveGtcha(c, g, captcha.ID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -119,7 +114,7 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 func verifySession(w http.ResponseWriter, r *http.Request) {}
 
 // GetApp returns a GtchaApp entity from the appengine datastore.
-func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
+func GetApp(c context.Context, id, origin string) (*GtchaApp, error) {
 	q := datastore.NewQuery("GtchaApp").Filter("APIKey =", id).Limit(1)
 	app := new(GtchaApp)
 	if _, err := q.Run(c).Next(app); err != nil {
@@ -141,16 +136,43 @@ func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
 
 // ParseDomains takes the raw user input string for their app origins
 // and makes it a slice of strings that are just the host.
-func ParseDomains(raw string) []string {
+func ParseDomains(raw string) ([]string, error) {
 	domains := strings.Split(raw, "\n")
 	for i, domain := range domains {
 		origin, err := url.Parse(domain)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return nil, err
 		}
 		domains[i] = origin.Host
 	}
 
-	return domains
+	return domains, nil
+}
+
+// GetGtcha looks for the captcha with the given ID in memcache and datastore.
+func GetGtcha(c context.Context, id string) (*gtcha, error) {
+	return nil, nil
+}
+
+// SaveGtcha saves a gtcha in the database and memcache.
+func SaveGtcha(c context.Context, g *gtcha, id string) error {
+	// put g in memcache
+	go func() {
+		buf, err := json.Marshal(g)
+		if err != nil {
+			return
+		}
+
+		memcache.Add(c, &memcache.Item{
+			Key:   id,
+			Value: buf,
+		})
+	}()
+
+	key := datastore.NewKey(c, "Captcha", id, 0, nil)
+	if _, err := datastore.Put(c, key, g); err != nil {
+		return err
+	}
+
+	return nil
 }

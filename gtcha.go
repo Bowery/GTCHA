@@ -5,9 +5,10 @@
 package gtcha
 
 import (
-	"log"
 	"net/http"
 	"sync"
+
+	"code.google.com/p/go-uuid/uuid"
 
 	"giphy"
 )
@@ -92,7 +93,6 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 
 	go func() {
 		wg.Wait()
-		log.Println(3)
 		errOnce.Do(func() {
 			errCh <- nil
 		})
@@ -102,8 +102,6 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println(5)
 
 	g := &gtcha{
 		Tag:   tag,
@@ -115,7 +113,7 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	return g, nil
 }
 
-func (g *gtcha) toCaptcha(id string) *Captcha {
+func (g *gtcha) toCaptcha() *Captcha {
 	imgs := make([]string, 0, len(g.In)+len(g.Out)+len(g.Maybe))
 	for _, l := range [][]string{g.In, g.Out, g.Maybe} {
 		for _, img := range l {
@@ -124,7 +122,7 @@ func (g *gtcha) toCaptcha(id string) *Captcha {
 	}
 
 	return &Captcha{
-		ID:     id,
+		ID:     uuid.New(),
 		Tag:    g.Tag,
 		Images: imgs,
 	}
