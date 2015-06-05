@@ -10,7 +10,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
-	"giphy"
+	"github.com/Bowery/gtcha/giphy"
 )
 
 // GtchaApp represents an app that is using our GIF captcha.
