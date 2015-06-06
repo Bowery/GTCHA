@@ -1,6 +1,7 @@
 package gtcha
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"appengine/aetest"
 	"appengine/datastore"
+	"appengine/memcache"
 )
 
 func TestRegisterApp(t *testing.T)   {}
@@ -57,7 +59,50 @@ func TestGetGtcha(t *testing.T) {
 }
 
 func TestSaveGtcha(t *testing.T) {
+	c, err := aetest.NewContext(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
 
+	g := &gtcha{
+		Tag:   "dog",
+		In:    []string{"a", "b", "c"},
+		Out:   []string{"d", "e", "f"},
+		Maybe: []string{"g", "h", "i"},
+	}
+
+	id := "testID"
+	if err = SaveGtcha(c, g, id); err != nil {
+		t.Fatal(err)
+	}
+
+	item, err := memcache.Get(c, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	retG := new(gtcha)
+	if err = json.Unmarshal(item.Value, retG); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := range g.In {
+		if g.In[i] != retG.In[i] {
+			t.Fatalf("expected same string %s, got %s", g.In[i], retG.In[i])
+		}
+	}
+
+	key := datastore.NewKey(c, "Gtcha", id, 0, nil)
+	if err := datastore.Get(c, key, retG); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := range g.In {
+		if g.In[i] != retG.In[i] {
+			t.Fatalf("expected same string %s, got %s", g.In[i], retG.In[i])
+		}
+	}
 }
 
 func TestParseDomains(t *testing.T) {
