@@ -198,14 +198,14 @@ func GetGtcha(c appengine.Context, id string) (*gtcha, error) {
 	eCh := make(chan error)
 	go func() {
 		err := <-errCh
-		wgErr.Wait()
+		wg.Wait()
 		o.Do(func() { eCh <- err })
 	}()
 
 	select {
 	case g := <-gCh:
 		return g, nil
-	case err := <-errBufCh:
+	case err := <-eCh:
 		return nil, err
 	}
 }
@@ -275,7 +275,7 @@ func parseDomain(raw string) (string, error) {
 
 	if domain := origin.Host; domain != "" { // handles cases like http://bowery.io
 		return domain, nil
-	} else if domain = origin.Path; domain != "" {
+	} else if domain = origin.Path; domain != "" { // handles cases like google.com
 		return domain, nil
 	}
 
