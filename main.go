@@ -37,8 +37,8 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := appengine.NewContext(r)
-	key := datastore.NewKey(c, "GtchaApp", uuid.New(), 0, nil)
-	app := &GtchaApp{
+	key := datastore.NewKey(c, "App", uuid.New(), 0, nil)
+	app := &App{
 		Name:    r.PostForm.Get("name"),
 		Secret:  key.StringID(),
 		APIKey:  uuid.New(),
@@ -74,7 +74,7 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := appengine.NewContext(r)
-	var app *GtchaApp
+	var app *App
 	if url := origin.Host; url != "" {
 		app, err = GetApp(c, apiKey, origin.Host)
 	} else {

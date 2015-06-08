@@ -15,9 +15,9 @@ import (
 )
 
 // GetApp returns a GtchaApp entity from the appengine datastore.
-func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
-	q := datastore.NewQuery("GtchaApp").Filter("APIKey =", id).Limit(1)
-	app := new(GtchaApp)
+func GetApp(c appengine.Context, id, origin string) (*App, error) {
+	q := datastore.NewQuery("App").Filter("APIKey =", id).Limit(1)
+	app := new(App)
 	if _, err := q.Run(c).Next(app); err != nil {
 		return nil, err
 	}

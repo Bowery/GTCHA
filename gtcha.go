@@ -13,8 +13,8 @@ import (
 	"github.com/Bowery/gtcha/giphy"
 )
 
-// GtchaApp represents an app that is using our GIF captcha.
-type GtchaApp struct {
+// App represents an app that is using our GIF captcha.
+type App struct {
 	Name string `json:"name,omitempty"`
 
 	// Secret is an app's secret key.
