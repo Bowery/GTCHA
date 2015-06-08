@@ -1,6 +1,6 @@
-// https://cloud.google.com/appengine/docs/go/tools/localunittesting/#Go_Introducing_the_aetest_package
-
 package gtcha
+
+import "testing"
 
 import (
 	"encoding/json"

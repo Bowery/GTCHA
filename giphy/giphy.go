@@ -1,7 +1,3 @@
-//
-// giphy API interactions
-//
-
 package giphy
 
 import (
@@ -11,8 +7,11 @@ import (
 	"net/http"
 )
 
+var (
+	giphyAPI = "https://api.giphy.com/v1"
+)
+
 const (
-	giphyAPI        = "https://api.giphy.com/v1"
 	giphyKey        = "dc6zaTOxFJmzC"
 	captchaEndpoint = "captcha"
 )
@@ -68,11 +67,11 @@ func GetOtherTag(c *http.Client, tag string) (string, error) {
 func GetImagesTagged(c *http.Client, tag string, page int) ([]*Image, error) {
 	url := genGiphyURL("gifs/search", "q="+tag)
 	var imgs []*Image
-	if err := makeGiphyCall(c, url, "GET", imgs); err != nil {
+	if err := makeGiphyCall(c, url, "GET", &imgs); err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	return imgs, nil
 }
 
 // GetImagesNotTagged gets images that do not match a specified tag.
