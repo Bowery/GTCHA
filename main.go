@@ -20,6 +20,7 @@ func init() {
 	handle("/register", registerApp, "POST")
 	handle("/captcha", getCaptcha, "GET")
 	handle("/verify", verifySession, "PUT")
+	handle("/dummy", dummyHandler, "GET")
 }
 
 func registerApp(w http.ResponseWriter, r *http.Request) {
@@ -115,3 +116,26 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 
 // TODO(r-medina): write this function
 func verifySession(w http.ResponseWriter, r *http.Request) {}
+
+func dummyHandler(w http.ResponseWriter, r *http.Request) {
+	c := &Captcha{
+		ID:  uuid.New(),
+		Tag: "#beyonce",
+		Images: []string{
+			"https://media1.giphy.com/media/yFNA1ndGA5ZuM/200.gif",
+			"https://media4.giphy.com/media/10H8p7oa4LUSB2/200.gif",
+			"https://media2.giphy.com/media/skYmSo5tpORr2/200.gif",
+			"https://media1.giphy.com/media/HfGqchLEK2WFq/200.gif",
+		},
+	}
+
+	encoder := json.NewEncoder(w)
+	err := encoder.Encode(c)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
