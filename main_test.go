@@ -3,6 +3,7 @@
 package gtcha
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,8 +12,6 @@ import (
 	"testing"
 
 	"code.google.com/p/appengine-go/appengine/aetest"
-
-	"appengine"
 )
 
 func TestRegisterApp(t *testing.T) {
@@ -23,27 +22,30 @@ func TestRegisterApp(t *testing.T) {
 	}
 	defer inst.Close()
 
-	ts := httptest.NewServer(http.HandlerFunc(registerApp))
-	defer ts.Close()
-
 	u := url.Values{}
 	u.Set("name", "bizzle")
 	u.Set("domains", "http://bowery.io/wut/up")
 	body := strings.NewReader(u.Encode())
-	req, err := inst.NewRequest("POST", ts.URL, body)
+	req, err := inst.NewRequest("POST", "/register", body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := appengine.NewContext(req)
-
 	rec := httptest.NewRecorder()
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
+	registerApp(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatal("bad status code")
+	}
+
+	decoder := json.NewDecoder(rec.Body)
+	app := new(GtchaApp)
+	if err = decoder.Decode(app); err != nil {
 		t.Fatal(err)
 	}
 
-	fmt.Printf("%+v\n", res) // output for debug
+	fmt.Printf("%+v\n", app) // output for debug
+
 }
 
 func TestGetCaptcha(t *testing.T)    {}
