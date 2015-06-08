@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-=======
-//
-// giphy API interactions
-//
-
->>>>>>> ff2977960434562fbb161d039a0a9efd89d4e7d7
 package giphy
 
 import (
@@ -14,12 +7,11 @@ import (
 	"net/http"
 )
 
-<<<<<<< HEAD
 var (
 	giphyAPI = "https://api.giphy.com/v1"
 )
 
-const(
+const (
 	giphyKey        = "dc6zaTOxFJmzC"
 	captchaEndpoint = "captcha"
 )
