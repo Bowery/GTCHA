@@ -28,17 +28,17 @@ type GtchaApp struct {
 
 // Captcha represents our user-facing GIF captcha.
 type Captcha struct {
-	ID      string   `json:"id,omitempty"`
-	Tag     string   `json:"tag"`
-	Images  []string `json:"images"`
-	IsHuman bool     `json:"-"`
+	ID     string   `json:"id,omitempty"`
+	Tag    string   `json:"tag"`
+	Images []string `json:"images"`
 }
 
 type gtcha struct {
-	Tag   string
-	In    []string
-	Out   []string
-	Maybe []string
+	Tag     string
+	In      []string
+	Out     []string
+	Maybe   []string
+	IsHuman bool
 }
 
 // newGtcha returns the internal representation of the GIF captcha.
