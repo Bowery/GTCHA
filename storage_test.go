@@ -7,9 +7,9 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
-	"appengine/aetest"
-	"appengine/datastore"
-	"appengine/memcache"
+	"google.golang.org/appengine/aetest"
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/memcache"
 )
 
 func TestGetApp(t *testing.T) {

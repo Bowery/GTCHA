@@ -11,9 +11,9 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
-	"appengine"
-	"appengine/datastore"
-	"appengine/urlfetch"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/urlfetch"
 )
 
 func init() {

@@ -1,7 +1,5 @@
 package gtcha
 
-import "testing"
-
 import (
 	"encoding/json"
 	"fmt"
@@ -11,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.google.com/p/appengine-go/appengine/aetest"
+	"google.golang.org/appengine/aetest"
 )
 
 func TestRegisterApp(t *testing.T) {
