@@ -17,9 +17,9 @@ import (
 )
 
 func init() {
+	handle("/register", registerApp, "POST")
 	handle("/captcha", getCaptcha, "GET")
 	handle("/verify", verifySession, "PUT")
-	handle("/register", registerApp, "POST")
 }
 
 func registerApp(w http.ResponseWriter, r *http.Request) {
