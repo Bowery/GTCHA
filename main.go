@@ -1,65 +1,123 @@
-package gitcha
+//
+// HTTP endpoints
+//
+
+package gtcha
 
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
+
+	"code.google.com/p/go-uuid/uuid"
+
+	"appengine"
+	"appengine/datastore"
+	"appengine/urlfetch"
 )
 
 func init() {
-	http.HandleFunc("/", rootHndlr)
-	http.HandleFunc("/is_h", isHumanHndlr)
-	http.HandleFunc("/isn_h", isNotHumanHndlr)
-	http.HandleFunc("/c", captchaHndlr)
+<<<<<<< HEAD
+	handle("/captcha", getCaptcha, "GET")
+	handle("/verify", verifySession, "PUT")
+	handle("/register", registerApp, "POST")
+=======
+	handle("/register", registerApp, "POST")
+	handle("/captcha", getCaptcha, "GET")
+	handle("/verify", verifySession, "PUT")
+>>>>>>> ff2977960434562fbb161d039a0a9efd89d4e7d7
 }
 
-func rootHndlr(w http.ResponseWriter, r *http.Request) {
-	captcha, err := NewCaptcha()
+func registerApp(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// clean up origin domains
+	domains, err := parseDomains(r.PostForm.Get("domains"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	resp, err := json.Marshal(captcha)
+	c := appengine.NewContext(r)
+	key := datastore.NewKey(c, "GtchaApp", uuid.New(), 0, nil)
+	app := &GtchaApp{
+		Name:    r.PostForm.Get("name"),
+		Secret:  key.StringID(),
+		APIKey:  uuid.New(),
+		Domains: domains,
+	}
+	if _, err := datastore.Put(c, key, app); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	if _, err := w.Write(resp); err != nil {
+	res, err := json.Marshal(app)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(resp)
+	w.Write(res)
 }
 
-func isHumanHndlr(w http.ResponseWriter, r *http.Request)    {}
-func isNotHumanHndlr(w http.ResponseWriter, r *http.Request) {}
+func getCaptcha(w http.ResponseWriter, r *http.Request) {
+	apiKey := r.URL.Query().Get("api_key")
 
-type captchaResp struct {
-	cert string
-	test string
-}
+	if apiKey == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 
-func captchaHndlr(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var cr captchaResp
-	err := decoder.Decode(&cr)
+	origin, err := url.Parse(r.Header.Get("Origin"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if cr.cert == "" || cr.test == "" {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
-		return
-	}
 
-	ok, err := AssociateImages(cr.cert, cr.test)
+	c := appengine.NewContext(r)
+	var app *GtchaApp
+	if url := origin.Host; url != "" {
+		app, err = GetApp(c, apiKey, origin.Host)
+	} else {
+		app, err = GetApp(c, apiKey, origin.Path)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if !ok {
-		http.Error(w, "Invalid input", http.StatusInternalServerError)
+	if app == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	httpC := urlfetch.Client(c)
+
+	// TODO(r-medina): cache captchas and get from a cache instead of generating each time
+
+	g, err := newGtcha(httpC)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	captcha := g.toCaptcha()
+	buf, err := json.Marshal(captcha)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err = SaveGtcha(c, g, captcha.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(buf)
 }
+
+// TODO(r-medina): write this function
+func verifySession(w http.ResponseWriter, r *http.Request) {}
