@@ -1,7 +1,5 @@
 package gtcha
 
-import "testing"
-
 import (
 	"encoding/json"
 	"fmt"
