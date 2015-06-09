@@ -48,7 +48,7 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// clean up origin domains
-	domains, err := parseDomains(r.PostForm.Get("domains"))
+	domains, err := parseDomains(r.PostForm["domain"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -137,7 +137,11 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 }
 
 // TODO(r-medina): write this function
-func verifySession(w http.ResponseWriter, r *http.Request) {}
+func verifySession(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func isVerified(w http.ResponseWriter, r *http.Request) {}
 
 func dummyHandler(w http.ResponseWriter, r *http.Request) {
 	c := &Captcha{

@@ -13,10 +13,7 @@ import (
 )
 
 func TestGetApp(t *testing.T) {
-	domains, err := parseDomains("bowery.io")
-	if err != nil {
-		t.Fatal(err)
-	}
+	domains := []string{"bowery.io"}
 
 	c, err := aetest.NewContext(nil)
 	if err != nil {

@@ -22,9 +22,8 @@ var errEmptyDomain = errors.New("domain empty")
 //     http://localhost:8080
 //
 // Empty lines will be removed.
-func parseDomains(raw string) ([]string, error) {
+func parseDomains(rawDomains []string) ([]string, error) {
 	var domains []string
-	rawDomains := strings.Split(raw, "\n")
 	for _, domain := range rawDomains {
 		url, err := parseDomain(domain)
 		if err == errEmptyDomain {

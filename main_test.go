@@ -24,7 +24,7 @@ func TestRegisterApp(t *testing.T) {
 	}
 	req.PostForm = url.Values{}
 	req.PostForm.Set("name", "bizzle")
-	req.PostForm.Set("domains", "http://bowery.io/wut/up")
+	req.PostForm.Add("domain", "http://bowery.io/wut/up")
 
 	rec := httptest.NewRecorder()
 
@@ -61,7 +61,7 @@ func TestRegisterApp(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.PostForm = url.Values{}
-	req.PostForm.Set("domains", "http://bowery.io/")
+	req.PostForm.Add("domain", "http://bowery.io/")
 
 	rec = httptest.NewRecorder()
 
