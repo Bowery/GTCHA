@@ -6,6 +6,7 @@ package gtcha
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -29,17 +30,29 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	name := r.PostForm.Get("name")
+	fmt.Printf("%+v\n", r.PostForm) // output for debug
+
+	if name == "" {
+		http.Error(w, "name cannot be empty", http.StatusBadRequest)
+		return
+	}
+
 	// clean up origin domains
 	domains, err := parseDomains(r.PostForm.Get("domains"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if len(domains) == 0 {
+		http.Error(w, "origins cannot be empty", http.StatusBadRequest)
+		return
+	}
 
 	c := appengine.NewContext(r)
 	key := datastore.NewKey(c, "GtchaApp", uuid.New(), 0, nil)
 	app := &GtchaApp{
-		Name:    r.PostForm.Get("name"),
+		Name:    name,
 		Secret:  key.StringID(),
 		APIKey:  uuid.New(),
 		Domains: domains,

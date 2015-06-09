@@ -2,11 +2,9 @@ package gtcha
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 
 	"google.golang.org/appengine/aetest"
@@ -20,14 +18,14 @@ func TestRegisterApp(t *testing.T) {
 	}
 	defer inst.Close()
 
-	u := url.Values{}
-	u.Set("name", "bizzle")
-	u.Set("domains", "http://bowery.io/wut/up")
-	body := strings.NewReader(u.Encode())
-	req, err := inst.NewRequest("POST", "/register", body)
+	req, err := inst.NewRequest("POST", "/register", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.PostForm = url.Values{}
+	req.PostForm.Set("name", "bizzle")
+	req.PostForm.Set("domains", "http://bowery.io/wut/up")
+
 	rec := httptest.NewRecorder()
 
 	registerApp(rec, req)
@@ -42,9 +40,54 @@ func TestRegisterApp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fmt.Printf("%+v\n", app) // output for debug
+	if app.Name != "bizzle" {
+		t.Fatalf("expected app name %s, got %s", "bizzle", app.Name)
+	}
 
+	if n, a := len(app.Domains), 1; n != a {
+		t.Fatalf("expected %d domains, got %d", n, a)
+	}
+
+	if app.Secret == "" {
+		t.Fatal("empty app secret")
+	}
+
+	if app.APIKey == "" {
+		t.Fatal("empty api key")
+	}
+
+	req, err = inst.NewRequest("POST", "/register", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.PostForm = url.Values{}
+	req.PostForm.Set("domains", "http://bowery.io/")
+
+	rec = httptest.NewRecorder()
+
+	registerApp(rec, req)
+
+	if rec.Code == http.StatusOK {
+		t.Fatal("should have returned error")
+	}
+
+	req, err = inst.NewRequest("POST", "/register", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.PostForm = url.Values{}
+	req.PostForm.Set("name", "dat app")
+
+	rec = httptest.NewRecorder()
+
+	registerApp(rec, req)
+
+	if rec.Code == http.StatusOK {
+		t.Fatal("should have returned error")
+	}
 }
+
+// TODO: these two can't be written until we have the endpoints from giphy
 
 func TestGetCaptcha(t *testing.T)    {}
 func TestVerifySession(t *testing.T) {}
