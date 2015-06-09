@@ -14,13 +14,24 @@ import (
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/urlfetch"
+
+	"github.com/Bowery/gopackages/web"
 )
 
 func init() {
-	handle("/register", registerApp, "POST")
-	handle("/captcha", getCaptcha, "GET")
-	handle("/verify", verifySession, "PUT")
-	handle("/dummy", dummyHandler, "GET")
+	handlers := []web.Handler{new(web.CorsHandler)}
+	s := web.NewServer("", handlers, routes)
+	s.Prestart()
+
+	http.Handle("/", handlers[0])
+}
+
+var routes = []web.Route{
+	{"POST", "/register", registerApp, false},
+	{"GET", "/captcha", getCaptcha, false},
+	{"PUT", "/verify", verifySession, false},
+	// {"GET", "/verify", isVerified, false},
+	{"GET", "/dummy", dummyHandler, false},
 }
 
 func registerApp(w http.ResponseWriter, r *http.Request) {
