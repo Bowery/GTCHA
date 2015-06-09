@@ -3,7 +3,9 @@ package gtcha
 import "testing"
 
 func TestParseDomains(t *testing.T) {
-	domains, err := parseDomains("http://bowery.io\ngoogle.com    \n   https://bing.no")
+	domains, err := parseDomains(
+		[]string{"http://bowery.io", "\ngoogle.com    ", "   https://bing.no"},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +26,7 @@ func TestParseDomains(t *testing.T) {
 		t.Fatalf("expected '%s', got '%s'", n, a)
 	}
 
-	domains, err = parseDomains("a\nb\nhttp://abc.com:8080")
+	domains, err = parseDomains([]string{"a", "\nb", "\nhttp://abc.com:8080"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,12 +47,12 @@ func TestParseDomains(t *testing.T) {
 		t.Fatalf("expected '%s', got '%s'", n, a)
 	}
 
-	domains, err = parseDomains("abc.com:8080")
+	domains, err = parseDomains([]string{"abc.com:8080"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
-	domains, err = parseDomains("a\n\n\n\n \n\nb\nhttp://abc.com:8080")
+	domains, err = parseDomains([]string{"a", "\n\n", "\n\n", " \n\n", "b\n", "http://abc.com:8080"})
 	if err != nil {
 		t.Fatal(err)
 	}
