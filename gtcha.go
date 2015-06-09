@@ -66,7 +66,7 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 		}
 		imgs := make([]string, len(apiImgs))
 		for i, img := range apiImgs {
-			imgs[i] = img.ID
+			imgs[i] = img.ID // TODO: maybe change this to one of the URLs?
 		}
 
 		return imgs
