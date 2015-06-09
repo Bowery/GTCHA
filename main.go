@@ -6,7 +6,6 @@ package gtcha
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -31,7 +30,6 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := r.PostForm.Get("name")
-	fmt.Printf("%+v\n", r.PostForm) // output for debug
 
 	if name == "" {
 		http.Error(w, "name cannot be empty", http.StatusBadRequest)
