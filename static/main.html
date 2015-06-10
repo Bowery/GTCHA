@@ -1,0 +1,226 @@
+<!doctype html>
+<head>
+<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+<script src='/static/main.js'></script>
+<style media="screen">
+* {
+  margin: 0;
+  padding: 0;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/*eventually this will be applied by JS or in an iframe*/
+.gtcha {
+  height: 109px;
+  width: 100%;
+  max-width: 300px;
+  background-color: black;
+  font-family: 'Open Sans', sans-serif;
+  color: white;
+  position: relative;
+
+  transition: 200ms all linear;
+  transition-delay: 2.2s;
+}
+
+.gtcha.active {
+  height: 289px;
+}
+
+.left {
+  position: absolute;
+  height: 100%;
+  width: 14px;
+
+  left: 0;
+  background-color: #00FF99;
+
+  transition: 500ms height linear;
+}
+.bottom {
+  position: absolute;
+  height: 14px;
+  width: 100%;
+
+  bottom: 0;
+  background-color: #00CCFF;
+
+  transition: 500ms width linear;
+  transition-delay: 500ms;
+}
+.right {
+  position: absolute;
+  height: -webkit-calc(100% - 54px);
+  height: calc(100% - 54px);
+  width: 14px;
+
+  right: 0;
+  bottom: 0;
+  background-color: #9933FF;
+
+  transition: 200ms height linear;
+  transition-delay: 1s;
+}
+.fake-shadow {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  right: 0;
+  top: 42px;
+  background-color: #4A167E;
+
+  transition: 100ms height linear;
+  transition-delay: 1.2s;
+}
+.corner {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  right: 0;
+  background-color: white;
+}
+.corner .corner-bottom {
+  height: 14px;
+  width: 42px;
+  bottom: 0;
+  right: 0;
+  position: absolute;
+  background-color: #FF6665;
+
+  transition: 300ms width linear;
+  transition-delay: 1.3s;
+}
+.corner .corner-left {
+  height: 42px;
+  width: 14px;
+  bottom: 0;
+  position: absolute;
+  background-color: #FF6665;
+
+  transition: 200ms height linear;
+  transition-delay: 1.6s;
+}
+.corner .corner-middle {
+  width: 14px;
+  height: 14px;
+  bottom: 14px;
+  left: 14px;
+  position: absolute;
+  background-color: #FF6665;
+
+  transition: 100ms height linear;
+  transition-delay: 1.7s;
+}
+.top {
+  position: absolute;
+  height: 14px;
+  width: calc(100% - 42px);
+  top: 0;
+  right: 42px;
+  background-color: #FFFF99;
+
+  transition: 400ms width linear;
+  transition-delay: 1.8s;
+}
+
+/* Initial State */
+.initial .left,
+.initial .right,
+.initial .fake-shadow,
+.initial .corner .corner-left,
+.initial .corner .corner-middle {
+  height: 0;
+}
+.initial .bottom,
+.initial .top,
+.initial .corner .corner-bottom {
+  width: 0;
+}
+.gtcha.initial {
+  background-color: white;
+}
+
+.form {
+  position: absolute;
+  width: calc(100% - 28px);
+  top: 14px;
+  left: 14px;
+  padding: 14px;
+}
+.form input[type="checkbox"] {
+  -webkit-appearance: none;
+  background-color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  margin: 0;
+  margin-right: 16px;
+  float: left;
+  outline: none;
+  cursor: pointer;
+}
+
+.options {
+  margin-top: 14px;
+  line-height: 0;
+  opacity: 0;
+  -webkit-column-count: 2;
+  -webkit-column-gap: 0px;
+
+  transition: 100ms opacity linear;
+  transition-delay: 200ms;
+}
+.options .option {
+  position: relative;
+}
+.options .option .mask {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  background-color: black;
+  transition: 50ms opacity linear;
+}
+.options .option .mask:hover {
+  cursor: pointer;
+  opacity: 0.2;
+}
+
+.options .option img {
+  width: 100% !important;
+  height: auto !important;
+}
+.gtcha.active .form .options {
+  opacity: 1;
+}
+
+</style>
+</head>
+<body>
+  <div class="gtcha initial" data-sitekey="6Lf-XAcTAAAAAM_QHbym6RQXu-YGQ_hNoSXNuNGQ">
+    <div class="form">
+      <input type="checkbox">
+      <label>I'm Human.</label>
+      <div class="options"></div>
+    </div>
+    <div class="right"></div>
+    <div class="fake-shadow"></div>
+    <div class="left"></div>
+    <div class="top"></div>
+    <div class="bottom"></div>
+    <div class="corner">
+      <div class="corner-left"></div>
+      <div class="corner-middle"></div>
+      <div class="corner-bottom"></div>
+    </div>
+  </div>
+</body>
+</html>
