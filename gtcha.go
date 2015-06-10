@@ -109,6 +109,35 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	return g, nil
 }
 
+func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
+	isHuman := false
+	for _, img := range in {
+		if checkImageIn(g.Out, img) {
+			return false
+		}
+
+		if checkImageIn(g.In, img) {
+			isHuman = true
+		}
+	}
+
+	if !isHuman {
+		return false
+	}
+
+	// check the images that might be tagged g's tag against the user's submitted images
+	// to let the giphy API know that a human verif
+	for _, img := range in {
+		go func(img string) {
+			if checkImageIn(g.Maybe, img) {
+				giphy.ConfirmTag(c, g.Tag, img)
+			}
+		}(img)
+	}
+
+	return true
+}
+
 func (g *gtcha) toCaptcha() *Captcha {
 	imgs := make([]string, 0, len(g.In)+len(g.Out)+len(g.Maybe))
 	for _, l := range [][]string{g.In, g.Out, g.Maybe} {
@@ -124,12 +153,10 @@ func (g *gtcha) toCaptcha() *Captcha {
 	}
 }
 
-func (g *gtcha) checkImageIn(i string) bool {
-	for _, l := range [][]string{g.In, g.Out, g.Maybe} {
-		for _, img := range l {
-			if i == img {
-				return true
-			}
+func checkImageIn(imgs []string, img string) bool {
+	for _, i := range imgs {
+		if i == img {
+			return true
 		}
 	}
 
