@@ -3,6 +3,9 @@ application: gitcha
 runtime: go
 api_version: go1
 
+skip_files:
+- ^(\.git/.*)
+
 handlers:
 - url: /static
   static_dir: static

@@ -5,13 +5,18 @@
 package gtcha
 
 import (
+	"bytes"
+	"errors"
 	"net/http"
 	"sync"
 
+	"code.google.com/p/appengine-go/appengine"
 	"code.google.com/p/go-uuid/uuid"
 
 	"github.com/Bowery/gtcha/giphy"
 )
+
+const gifType = "image/gif"
 
 // GtchaApp represents an app that is using our GIF captcha.
 type GtchaApp struct {
@@ -28,17 +33,28 @@ type GtchaApp struct {
 
 // Captcha represents our user-facing GIF captcha.
 type Captcha struct {
-	ID     string   `json:"id,omitempty"`
-	Tag    string   `json:"tag"`
-	Images []string `json:"images"`
+	ID     string `json:"id,omitempty"`
+	Tag    string `json:"tag"`
+	Images []GImg `json:"images"`
+}
+
+type GImg struct {
+	ID  string `json:"id"`
+	URI string `json:"uri"`
 }
 
 type gtcha struct {
 	Tag     string
-	In      []string
-	Out     []string
-	Maybe   []string
+	In      []gimg
+	Out     []gimg
+	Maybe   []gimg
 	IsHuman bool
+}
+
+type gimg struct {
+	ID   string `json:"id"`
+	GID  string `json:"gid"` // the ID on the giphy backend
+	GURI string `json:"guri"`
 }
 
 // newGtcha returns the internal representation of the GIF captcha.
@@ -50,23 +66,27 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	}
 
 	var (
-		in      []string
-		out     []string
-		maybe   []string
+		in      []gimg
+		out     []gimg
+		maybe   []gimg
 		wg      sync.WaitGroup
 		errOnce sync.Once
 		errCh   = make(chan error)
 	)
 
 	// closes over some variables, so that we can get all the imges in parrallel
-	processImages := func(fn func(*http.Client, string, int) ([]*giphy.Image, error)) []string {
+	processImages := func(fn func(*http.Client, string, int) ([]*giphy.Image, error)) []gimg {
 		apiImgs, err := fn(c, tag, 0)
 		if err != nil {
 			errOnce.Do(func() { errCh <- err })
 		}
-		imgs := make([]string, len(apiImgs))
+		imgs := make([]gimg, len(apiImgs))
 		for i, img := range apiImgs {
-			imgs[i] = img.ID // TODO: maybe change this to one of the URLs?
+			imgs[i] = gimg{
+				ID:   uuid.New(),
+				GID:  img.ID,
+				GURI: img.Images.FixedWidthSmall.URL,
+			}
 		}
 
 		return imgs
@@ -112,11 +132,11 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
 	isHuman := false
 	for _, img := range in {
-		if checkImageIn(g.Out, img) {
+		if isImageIn(g.Out, img) {
 			return false
 		}
 
-		if checkImageIn(g.In, img) {
+		if isImageIn(g.In, img) {
 			isHuman = true
 		}
 	}
@@ -129,7 +149,7 @@ func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
 	// to let the giphy API know that a human verif
 	for _, img := range in {
 		go func(img string) {
-			if checkImageIn(g.Maybe, img) {
+			if isImageIn(g.Maybe, img) {
 				giphy.ConfirmTag(c, g.Tag, img)
 			}
 		}(img)
@@ -138,24 +158,118 @@ func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
 	return true
 }
 
-func (g *gtcha) toCaptcha() *Captcha {
-	imgs := make([]string, 0, len(g.In)+len(g.Out)+len(g.Maybe))
-	for _, l := range [][]string{g.In, g.Out, g.Maybe} {
+func (img *gimg) toGImg(c appengine.Context, httpC *http.Client) (*GImg, error) {
+	gotten := false
+	var mtx sync.Mutex
+
+	f1 := func() interface{} {
+		mtx.Lock()
+		defer mtx.Unlock()
+		uri, err := GetImageURI(c, img.GID)
+		if err != nil {
+			return nil
+		}
+
+		gotten = true
+		return &GImg{img.ID, uri}
+	}
+
+	f2 := func() (interface{}, error) {
+		mtx.Lock()
+		if gotten {
+			mtx.Unlock()
+			return nil, errors.New("done")
+		}
+		mtx.Unlock()
+
+		req, err := http.NewRequest("GET", img.GURI, nil)
+		if err != nil {
+			return nil, err
+		}
+		res, err := httpC.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer res.Body.Close()
+
+		buf := new(bytes.Buffer)
+		if _, err = buf.ReadFrom(res.Body); err != nil {
+			return nil, err
+		}
+
+		uri := dataURI(buf.Bytes(), gifType)
+		go CacheImageURI(c, img.GID, uri)
+		return &GImg{img.ID, uri}, nil
+	}
+
+	i, err := Get(f1, f2)
+	if err != nil {
+		return nil, err
+	}
+
+	return i.(*GImg), nil
+}
+
+func (g *gtcha) toCaptcha(c appengine.Context, httpC *http.Client) (*Captcha, error) {
+	var (
+		o     sync.Once
+		wg    sync.WaitGroup
+		errCh = make(chan error)
+		imgCh = make(chan *GImg) // saves overhead to use pointer
+		n     = len(g.In) + len(g.Out) + len(g.Maybe)
+	)
+
+	wg.Add(n)
+
+	for _, l := range [][]gimg{g.In, g.Out, g.Maybe} {
 		for _, img := range l {
-			imgs = append(imgs, img)
+			go func(img gimg) {
+				defer wg.Done()
+
+				i, err := img.toGImg(c, httpC)
+				if err != nil {
+					o.Do(func() { errCh <- err })
+					return
+				}
+
+				imgCh <- i
+			}(img)
 		}
 	}
 
-	return &Captcha{
+	go func() {
+		wg.Wait()
+		close(imgCh)
+	}()
+
+	imgs := make([]GImg, 0, n)
+LOOP:
+	for {
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return nil, err
+			}
+		case img, ok := <-imgCh:
+			if !ok {
+				break LOOP
+			}
+			imgs = append(imgs, *img)
+		}
+	}
+
+	captcha := &Captcha{
 		ID:     uuid.New(),
 		Tag:    g.Tag,
 		Images: imgs,
 	}
+
+	return captcha, nil
 }
 
-func checkImageIn(imgs []string, img string) bool {
+func isImageIn(imgs []gimg, img string) bool {
 	for _, i := range imgs {
-		if i == img {
+		if i.ID == img {
 			return true
 		}
 	}
