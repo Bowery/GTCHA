@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"google.golang.org/appengine/aetest"
+	"code.google.com/p/appengine-go/appengine/aetest"
 )
 
 func TestRegisterApp(t *testing.T) {
