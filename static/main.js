@@ -38,14 +38,23 @@ Gtcha.prototype.onResponse = function (res) {
   var optionsEl = this._el.querySelector('.options')
   var self = this
   this._data.images.forEach(function (gif) {
-    optionsEl.innerHTML += '<li><img src="' + gif + '" /></li>'
+    optionsEl.innerHTML += '\
+      <div class="option">\
+        <div class="mask"></div>\
+        <img src="' + gif + '">\
+      </div>'
   })
 }
 
 Gtcha.prototype.onCheckboxClick = function (e) {
   e.preventDefault()
-  this._el.querySelector('label').innerHTML = 'Prove it by selecting gifs w/ ' + this._data.tag
+
+  // Update desc display.
+  this._el.querySelector('label').innerHTML = this._data.tag
+
+  // Expand height to accomodate 
   this._el.className += ' active'
+  this._el.style.transitionDelay = '0s'
 }
 
 Gtcha.prototype.onGifSelect = function (e) {}
