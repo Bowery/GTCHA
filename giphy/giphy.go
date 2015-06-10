@@ -88,3 +88,8 @@ func GetImagesNotTagged(c *http.Client, tag string, page int) ([]*Image, error) 
 func GetImagesMaybeTagged(c *http.Client, tag string, page int) ([]*Image, error) {
 	return nil, nil
 }
+
+// ConfirmTag tells the giphy API that an image was tagged by a user we know to be human.
+func ConfirmTag(c *http.Client, tag, img string) error {
+	return nil
+}

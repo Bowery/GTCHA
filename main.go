@@ -6,8 +6,8 @@ package gtcha
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
-	"net/url"
 
 	"code.google.com/p/go-uuid/uuid"
 
@@ -18,20 +18,24 @@ import (
 	"github.com/Bowery/gopackages/web"
 )
 
-func init() {
-	handlers := []web.Handler{new(web.CorsHandler)}
-	s := web.NewServer("", handlers, routes)
-	s.Prestart()
-
-	http.Handle("/", handlers[0])
+type verificationResponse struct {
+	IsHuman bool `json:"is_human"`
 }
 
 var routes = []web.Route{
 	{"POST", "/register", registerApp, false},
 	{"GET", "/captcha", getCaptcha, false},
 	{"PUT", "/verify", verifySession, false},
-	// {"GET", "/verify", isVerified, false},
+	{"GET", "/verify", isVerified, false},
 	{"GET", "/dummy", dummyHandler, false},
+}
+
+func init() {
+	handlers := []web.Handler{new(web.CorsHandler)}
+	s := web.NewServer("", handlers, routes)
+	s.Prestart()
+
+	http.Handle("/", handlers[0])
 }
 
 func registerApp(w http.ResponseWriter, r *http.Request) {
@@ -71,77 +75,121 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := json.Marshal(app)
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(app)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(res)
+	w.WriteHeader(http.StatusOK)
 }
 
 func getCaptcha(w http.ResponseWriter, r *http.Request) {
-	apiKey := r.URL.Query().Get("api_key")
-
-	if apiKey == "" {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	origin, err := url.Parse(r.Header.Get("Origin"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	c := appengine.NewContext(r)
-	var app *GtchaApp
-	if url := origin.Host; url != "" {
-		app, err = GetApp(c, apiKey, origin.Host)
-	} else {
-		app, err = GetApp(c, apiKey, origin.Path)
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if app == nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
 
-	httpC := urlfetch.Client(c)
+	if err := verifyRequest(c, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// TODO(r-medina): cache captchas and get from a cache instead of generating each time
 
-	g, err := newGtcha(httpC)
+	g, err := newGtcha(urlfetch.Client(c))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	captcha := g.toCaptcha()
-	buf, err := json.Marshal(captcha)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	if err = SaveGtcha(c, g, captcha.ID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(captcha)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(buf)
+	w.WriteHeader(http.StatusOK)
 }
 
-// TODO(r-medina): write this function
 func verifySession(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
 
+	if err := verifyRequest(c, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	id := r.PostForm.Get("id")
+	tag := r.PostForm.Get("tag")
+	in := r.PostForm["in"]
+	if len(in) == 0 {
+		http.Error(w, "no images selected", http.StatusBadRequest)
+		return
+	}
+
+	g, err := GetGtcha(c, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if tag != g.Tag {
+		http.Error(w, "tag incorrect for given id", http.StatusInternalServerError)
+		return
+	}
+
+	go func() {
+		if verifyGtcha(urlfetch.Client(c), g, in) {
+			SaveGtcha(c, g, id)
+		}
+	}()
+
+	w.WriteHeader(http.StatusOK)
 }
 
-func isVerified(w http.ResponseWriter, r *http.Request) {}
+func isVerified(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+
+	if err := verifyRequest(c, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO(r-medina): abstract out everything above this
+
+	g, err := GetGtcha(c, r.PostForm.Get("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(verificationResponse{g.IsHuman})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
 
 func dummyHandler(w http.ResponseWriter, r *http.Request) {
 	c := &Captcha{
@@ -164,4 +212,27 @@ func dummyHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+}
+
+func verifyRequest(c appengine.Context, r *http.Request) error {
+	apiKey := r.URL.Query().Get("api_key")
+
+	if apiKey == "" {
+		return errors.New("unauthorized")
+	}
+
+	origin, err := parseDomain(r.Header.Get("Origin"))
+	if err != nil {
+		return err
+	}
+
+	app, err := GetApp(c, apiKey, origin)
+	if err != nil {
+		return err
+	}
+	if app == nil {
+		return errors.New("unauthorized")
+	}
+
+	return nil
 }
