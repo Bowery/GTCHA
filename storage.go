@@ -9,9 +9,9 @@ import (
 	"errors"
 	"sync"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/memcache"
+	"appengine"
+	"appengine/datastore"
+	"appengine/memcache"
 )
 
 // GetApp returns a GtchaApp entity from the appengine datastore.

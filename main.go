@@ -11,9 +11,9 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/urlfetch"
+	"appengine"
+	"appengine/datastore"
+	"appengine/urlfetch"
 
 	"github.com/Bowery/gopackages/web"
 )
