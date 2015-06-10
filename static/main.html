@@ -19,20 +19,21 @@ body {
 
 /*eventually this will be applied by JS or in an iframe*/
 .gtcha {
-  height: 109px;
+  height: 84px;
   width: 100%;
   max-width: 300px;
   background-color: black;
   font-family: 'Open Sans', sans-serif;
   color: white;
   position: relative;
-
+  overflow: hidden;
+  
   transition: 200ms all linear;
   transition-delay: 2.2s;
 }
 
 .gtcha.active {
-  height: 289px;
+  height: 346px;
 }
 
 .left {
@@ -148,14 +149,14 @@ body {
   background-color: white;
 }
 
-.form {
+form {
   position: absolute;
   width: calc(100% - 28px);
   top: 14px;
   left: 14px;
   padding: 14px;
 }
-.form input[type="checkbox"] {
+form input[type="checkbox"] {
   -webkit-appearance: none;
   background-color: white;
   width: 20px;
@@ -178,6 +179,9 @@ body {
   transition: 100ms opacity linear;
   transition-delay: 200ms;
 }
+.gtcha.active form .options {
+  opacity: 1;
+}
 .options .option {
   position: relative;
 }
@@ -189,28 +193,55 @@ body {
   background-color: black;
   transition: 50ms opacity linear;
 }
+
 .options .option .mask:hover {
   cursor: pointer;
   opacity: 0.2;
+}
+.options .option.selected .mask {
+  opacity: 0.5;
+}
+.options .option.selected .mask:before {
+  content: '\2714';
+  position: absolute;
+  bottom: 16px;
+  right: 7px;
+  font-size: 20px;
 }
 
 .options .option img {
   width: 100% !important;
   height: auto !important;
 }
-.gtcha.active .form .options {
-  opacity: 1;
+
+input[type="submit"] {
+  display: none;
+  background: #6623b1;
+  border: none;
+  text-transform: uppercase;
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  padding: 5px 15px;
+  outline: none;
+}
+input[type="submit"]:hover {
+  cursor: pointer;
+}
+.gtcha.active form input[type="submit"] {
+  display: block;
 }
 
 </style>
 </head>
 <body>
-  <div class="gtcha initial" data-sitekey="6Lf-XAcTAAAAAM_QHbym6RQXu-YGQ_hNoSXNuNGQ">
-    <div class="form">
-      <input type="checkbox">
+  <div class="gtcha initial" data-key="6Lf-XAcTAAAAAM_QHbym6RQXu-YGQ_hNoSXNuNGQ">
+    <form>
+      <input type="checkbox" />
       <label>I'm Human.</label>
       <div class="options"></div>
-    </div>
+      <input type="submit" value="Submit" />
+    </form>
     <div class="right"></div>
     <div class="fake-shadow"></div>
     <div class="left"></div>
