@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"code.google.com/p/appengine-go/appengine/aetest"
 	"code.google.com/p/go-uuid/uuid"
 
 	"appengine/datastore"
 	"appengine/memcache"
-	"google.golang.org/appengine/aetest"
 )
 
 func TestGetApp(t *testing.T) {
