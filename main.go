@@ -27,7 +27,8 @@ var routes = []web.Route{
 	{"GET", "/captcha", getCaptcha, false},
 	{"PUT", "/verify", verifySession, false},
 	{"GET", "/verify", isVerified, false},
-	{"GET", "/dummy", dummyHandler, false},
+	{"GET", "/dummy_get", dummyGetHandler, false},
+	{"PUT", "/dummy_put", dummyPutHandler, false},
 }
 
 func init() {
@@ -188,10 +189,9 @@ func isVerified(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
 
-func dummyHandler(w http.ResponseWriter, r *http.Request) {
+func dummyGetHandler(w http.ResponseWriter, r *http.Request) {
 	c := &Captcha{
 		ID:  uuid.New(),
 		Tag: "#beyonce",
@@ -211,7 +211,10 @@ func dummyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	// w.WriteHeader(http.StatusOK)
+}
+
+func dummyPutHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func verifyRequest(c appengine.Context, r *http.Request) error {
