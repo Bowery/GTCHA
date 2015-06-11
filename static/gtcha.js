@@ -1,4 +1,3 @@
-/* PLEASE DO NOT COPY AND PASTE THIS CODE. */
 window.onload = function () {
   gtcha = new Gtcha()
   gtcha.init()
@@ -31,8 +30,9 @@ Gtcha.prototype._key = ''
 Gtcha.prototype.init = function () {
   this._el = document.querySelector('.gtcha')
   this._el.className = 'gtcha'
-  this._key = this._el.getAttribute('data-key')
+  this._key = window.location.href.split('?site_key=')[1]
 
+  this.updateHeight(84)
   this.fetch()
 
   this._el.querySelector('input[type="checkbox"]').onclick = this.onCheckboxClick.bind(this)
@@ -92,6 +92,7 @@ Gtcha.prototype.onCheckboxClick = function (e) {
   this._el.querySelector('label').innerHTML = this._data.tag
   this._el.className = 'gtcha active'
   this._el.style.transitionDelay = '0s'
+  this.updateHeight(346)
 }
 
 /**
@@ -148,4 +149,10 @@ Gtcha.prototype.onSubmitResponse = function (res) {
 
   this._el.className = 'gtcha'
   this._el.querySelector('label').innerHTML = 'All good.'
+  this.updateHeight(84)
+}
+
+
+Gtcha.prototype.updateHeight = function (height) {
+  window.parent.postMessage(['setHeight', height], '*')
 }
