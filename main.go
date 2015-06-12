@@ -198,19 +198,33 @@ func isVerified(w http.ResponseWriter, r *http.Request) {
 }
 
 func dummyGetHandler(w http.ResponseWriter, r *http.Request) {
-	c := &Captcha{
-		ID:  "A",
-		Tag: "Beyonce",
-		Images: []GImg{
-			GImg{ID: "a", URI: "https://media1.giphy.com/media/yFNA1ndGA5ZuM/200.gif"},
-			GImg{ID: "b", URI: "https://media4.giphy.com/media/10H8p7oa4LUSB2/200.gif"},
-			GImg{ID: "c", URI: "https://media2.giphy.com/media/skYmSo5tpORr2/200.gif"},
-			GImg{ID: "d", URI: "https://media1.giphy.com/media/HfGqchLEK2WFq/200.gif"},
+	g := &gtcha{
+		Tag: "cute puppy",
+		In: []gimg{
+			gimg{"in_1", "DgzJFvt6StyFi", "http://media0.giphy.com/media/DgzJFvt6StyFi/100w.gif"},
+			gimg{"in_2", "13OWYvLosSoK2I", "http://media0.giphy.com/media/13OWYvLosSoK2I/100w.gif"},
+		},
+		Out: []gimg{
+			gimg{"out_1", "14f3BPP6SCc0Mw", "http://media1.giphy.com/media/14f3BPP6SCc0Mw/100w.gif"},
+			gimg{"out_2", "OrkjamOz6caA0", "http://media0.giphy.com/media/OrkjamOz6caA0/100w.gif"},
+		},
+		Maybe: []gimg{
+			gimg{"maybe_1", "K2BQcrA30rUMU", "http://media0.giphy.com/media/K2BQcrA30rUMU/100w.gif"},
+			gimg{"maybe_2", "f4i4IpVQVhtu0", "http://media4.giphy.com/media/f4i4IpVQVhtu0/100w.gif"},
 		},
 	}
 
+	c := appengine.NewContext(r)
+	httpC := urlfetch.Client(c)
+
+	captcha, err := g.toCaptcha(c, httpC)
+	if err != nil {
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		return
+	}
+
 	encoder := json.NewEncoder(w)
-	err := encoder.Encode(c)
+	err = encoder.Encode(captcha)
 	if err != nil {
 		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
