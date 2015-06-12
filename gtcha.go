@@ -131,23 +131,24 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 }
 
 func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
-	isHuman := false
+	n := len(g.In)
+	correctSelections := 0
 	for _, img := range in {
 		if isImageIn(g.Out, img) {
 			return false
 		}
 
 		if isImageIn(g.In, img) {
-			isHuman = true
+			correctSelections++
 		}
 	}
 
-	if !isHuman {
+	if correctSelections < n {
 		return false
 	}
 
 	// check the images that might be tagged g's tag against the user's submitted images
-	// to let the giphy API know that a human verif
+	// to let the giphy API know that a human verified the tag
 	for _, img := range in {
 		go func(img string) {
 			if isImageIn(g.Maybe, img) {
