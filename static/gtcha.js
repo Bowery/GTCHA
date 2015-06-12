@@ -62,7 +62,8 @@ Gtcha.prototype.fetch = function () {
  */
 Gtcha.prototype.onResponse = function (res) {
   if (res.status != 200) {
-    // handle error
+    this.handleErr(JSON.parse(res.response).error)
+    return
   }
   this._data = JSON.parse(res.response)
   
@@ -144,7 +145,8 @@ Gtcha.prototype.onSubmitClick = function (e) {
  */
 Gtcha.prototype.onSubmitResponse = function (res) {
   if (res.status != 200) {
-    // handle error
+    this.handleErr(JSON.parse(res.response).error)
+    return
   }
 
   this._el.className = 'gtcha'
@@ -152,7 +154,14 @@ Gtcha.prototype.onSubmitResponse = function (res) {
   this.updateHeight(84)
 }
 
-
 Gtcha.prototype.updateHeight = function (height) {
   window.parent.postMessage(['setHeight', height], '*')
+}
+
+/**
+ * handleErr handles the error body from a non-200 response.
+ * @param {String}
+ */
+Gtcha.prototype.handleErr = function (err) {
+  console.log(err)
 }
