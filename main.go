@@ -11,11 +11,11 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
+	"github.com/Bowery/gopackages/web"
+
 	"appengine"
 	"appengine/datastore"
 	"appengine/urlfetch"
-
-	"github.com/Bowery/gopackages/web"
 )
 
 type verificationResponse struct {
@@ -97,12 +97,17 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 
 	// TODO(r-medina): cache captchas and get from a cache instead of generating each time
 
-	g, err := newGtcha(urlfetch.Client(c))
+	httpC := urlfetch.Client(c)
+	g, err := newGtcha(httpC)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	captcha := g.toCaptcha()
+	captcha, err := g.toCaptcha(c, httpC)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	if err = SaveGtcha(c, g, captcha.ID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -193,13 +198,13 @@ func isVerified(w http.ResponseWriter, r *http.Request) {
 
 func dummyGetHandler(w http.ResponseWriter, r *http.Request) {
 	c := &Captcha{
-		ID:  uuid.New(),
-		Tag: "#beyonce",
-		Images: []string{
-			"https://media1.giphy.com/media/yFNA1ndGA5ZuM/200.gif",
-			"https://media4.giphy.com/media/10H8p7oa4LUSB2/200.gif",
-			"https://media2.giphy.com/media/skYmSo5tpORr2/200.gif",
-			"https://media1.giphy.com/media/HfGqchLEK2WFq/200.gif",
+		ID:  "A",
+		Tag: "Beyonce",
+		Images: []GImg{
+			GImg{ID: "a", URI: "https://media1.giphy.com/media/yFNA1ndGA5ZuM/200.gif"},
+			GImg{ID: "b", URI: "https://media4.giphy.com/media/10H8p7oa4LUSB2/200.gif"},
+			GImg{ID: "c", URI: "https://media2.giphy.com/media/skYmSo5tpORr2/200.gif"},
+			GImg{ID: "d", URI: "https://media1.giphy.com/media/HfGqchLEK2WFq/200.gif"},
 		},
 	}
 

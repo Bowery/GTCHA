@@ -7,7 +7,6 @@ package gtcha
 import (
 	"encoding/json"
 	"errors"
-	"sync"
 
 	"appengine"
 	"appengine/datastore"
@@ -37,70 +36,38 @@ func GetApp(c appengine.Context, id, origin string) (*GtchaApp, error) {
 
 // GetGtcha looks for the captcha with the given ID in memcache and datastore.
 func GetGtcha(c appengine.Context, id string) (*gtcha, error) {
-	var (
-		o     sync.Once
-		wg    sync.WaitGroup
-		gCh   = make(chan *gtcha)
-		errCh = make(chan error)
-	)
-
-	//
-	// This has to solve the following problem:
-	//
-	// You have two routines trying to get data. You want to return the data returned on a
-	// successful call and you only want to send an error once both routines have errored.
-	//
-	// We mostly solve this by using a waitgroup, but this also requires some additional
-	// machinery. We send the completed data over a channel and then select on that
-	// channel and another channel that sends an error (if there is one) once the
-	// waitgroup is finished.
-	//
-
-	wg.Add(2)
-
 	// memcache
-	go func() {
-		defer wg.Done()
-		item, err := memcache.Get(c, id)
+	f1 := func() interface{} {
+		item, err := memcache.Get(c, "Gtcha"+id)
 		if err != nil {
-			return
+			return nil
 		}
 
 		g := new(gtcha)
 		if err = json.Unmarshal(item.Value, g); err != nil {
-			return
+			return nil
 		}
 
-		o.Do(func() { gCh <- g })
-	}()
+		return g
+	}
 
 	// datastore
-	go func() {
-		defer wg.Done()
+	f2 := func() (interface{}, error) {
 		key := datastore.NewKey(c, "Gtcha", id, 0, nil)
 		g := new(gtcha)
 		if err := datastore.Get(c, key, g); err != nil {
-			errCh <- err
-			return
+			return nil, err
 		}
 
-		o.Do(func() { gCh <- g })
-		errCh <- nil
-	}()
-
-	eCh := make(chan error)
-	go func() {
-		err := <-errCh
-		wg.Wait()
-		o.Do(func() { eCh <- err })
-	}()
-
-	select {
-	case g := <-gCh:
 		return g, nil
-	case err := <-eCh:
+	}
+
+	g, err := Get(f1, f2)
+	if err != nil {
 		return nil, err
 	}
+
+	return g.(*gtcha), nil
 }
 
 // SaveGtcha saves a gtcha in the database and memcache.
@@ -113,7 +80,7 @@ func SaveGtcha(c appengine.Context, g *gtcha, id string) error {
 		}
 
 		memcache.Add(c, &memcache.Item{
-			Key:   id,
+			Key:   "Gtcha" + id,
 			Value: buf,
 		})
 	}()
@@ -124,4 +91,22 @@ func SaveGtcha(c appengine.Context, g *gtcha, id string) error {
 	}
 
 	return nil
+}
+
+// CacheImageURI caches the generated image uri.
+func CacheImageURI(c appengine.Context, id, uri string) error {
+	return memcache.Add(c, &memcache.Item{
+		Key:   "uri" + id,
+		Value: []byte(uri),
+	})
+}
+
+// GetImageURI attempts to find the base64 encoded ata URI of an image in memcache.
+func GetImageURI(c appengine.Context, id string) (string, error) {
+	item, err := memcache.Get(c, "uri"+id)
+	if err != nil {
+		return "", err
+	}
+
+	return string(item.Value), nil
 }

@@ -30,6 +30,7 @@ func makeGiphyCall(c *http.Client, url, method string, out interface{}) error {
 	if err != nil {
 		return err
 	}
+	res.Body.Close()
 
 	decoder := json.NewDecoder(res.Body)
 	if err = decoder.Decode(out); err != nil {

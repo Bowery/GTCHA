@@ -54,13 +54,6 @@ func TestGetGtcha(t *testing.T) {
 	}
 	defer c.Close()
 
-	g := &gtcha{
-		Tag:   "dog",
-		In:    []string{"a", "b", "c"},
-		Out:   []string{"d", "e", "f"},
-		Maybe: []string{"g", "h", "i"},
-	}
-
 	id := "testID"
 	if err = SaveGtcha(c, g, id); err != nil {
 		t.Fatal(err)
@@ -85,19 +78,12 @@ func TestSaveGtcha(t *testing.T) {
 	}
 	defer c.Close()
 
-	g := &gtcha{
-		Tag:   "dog",
-		In:    []string{"a", "b", "c"},
-		Out:   []string{"d", "e", "f"},
-		Maybe: []string{"g", "h", "i"},
-	}
-
 	id := "testID"
 	if err = SaveGtcha(c, g, id); err != nil {
 		t.Fatal(err)
 	}
 
-	item, err := memcache.Get(c, id)
+	item, err := memcache.Get(c, "Gtcha"+id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,3 +110,6 @@ func TestSaveGtcha(t *testing.T) {
 		}
 	}
 }
+
+func TestCacheImageURI(t *testing.T) { t.Log("TODO") }
+func TestGetImageURI(t *testing.T)   { t.Log("TODO") }
