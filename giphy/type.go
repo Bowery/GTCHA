@@ -4,19 +4,21 @@
 
 package giphy
 
-type searchResults struct {
-	Data []Image `json:"data"`
+type searchResult struct {
+	Data []*Image `json:"data"`
 
-	Meta *struct {
-		Msg    string `json:"msg"`
-		Status int    `json:"status"`
-	} `json:"meta"`
+	*Meta `json:"meta"`
 
 	Pagination *struct {
 		Count      int `json:"count"`
 		Offset     int `json:"offset"`
 		TotalCount int `json:"total_count"`
 	} `json:"pagination"`
+}
+
+type Meta struct {
+	Msg    string `json:"msg"`
+	Status int    `json:"status"`
 }
 
 // Image represents an image returned from the giphy API.
@@ -64,4 +66,9 @@ type imageInfo struct {
 	Webp     string `json:"webp"`
 	WebpSize string `json:"webp_size"`
 	Width    string `json:"width"`
+}
+
+type tagResult struct {
+	Data string `json:"data"`
+	*Meta
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -32,6 +33,18 @@ func makeGiphyCall(c *http.Client, url, method string, out interface{}) error {
 	}
 	res.Body.Close()
 
+	if res.StatusCode >= 400 {
+		buf, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return errors.New("giphy API error")
+		}
+		return errors.New("giphy API error " + string(buf))
+	}
+
+	if out == nil {
+		return nil
+	}
+
 	decoder := json.NewDecoder(res.Body)
 	if err = decoder.Decode(out); err != nil {
 		return err
@@ -42,7 +55,13 @@ func makeGiphyCall(c *http.Client, url, method string, out interface{}) error {
 
 // GetTag gets a random tag from the giphy API.
 func GetTag(c *http.Client) (string, error) {
-	return "", nil
+	url := genGiphyURL("tag/random", "")
+	res := new(tagResult)
+	if err := makeGiphyCall(c, url, "GET", res); err != nil {
+		return "", err
+	}
+
+	return res.Data, nil
 }
 
 // GetOtherTag gets a tag that isn't `tag` from the giphyAPI.
@@ -67,12 +86,12 @@ func GetOtherTag(c *http.Client, tag string) (string, error) {
 // GetImagesTagged returns a slice of images that definitely match `tag`.
 func GetImagesTagged(c *http.Client, tag string, page int) ([]*Image, error) {
 	url := genGiphyURL("gifs/search", "q="+tag)
-	var imgs []*Image
-	if err := makeGiphyCall(c, url, "GET", &imgs); err != nil {
+	res := new(searchResult)
+	if err := makeGiphyCall(c, url, "GET", res); err != nil {
 		return nil, err
 	}
 
-	return imgs, nil
+	return res.Data, nil
 }
 
 // GetImagesNotTagged gets images that do not match a specified tag.
@@ -87,10 +106,23 @@ func GetImagesNotTagged(c *http.Client, tag string, page int) ([]*Image, error) 
 
 // GetImagesMaybeTagged returns images that *might* match `tag`.
 func GetImagesMaybeTagged(c *http.Client, tag string, page int) ([]*Image, error) {
-	return nil, nil
+	url := genGiphyURL("gifs/search", "maybe="+tag)
+	res := new(searchResult)
+	if err := makeGiphyCall(c, url, "GET", res); err != nil {
+		return nil, err
+	}
+
+	return res.Data, nil
 }
 
-// ConfirmTag tells the giphy API that an image was tagged by a user we know to be human.
+// ConfirmTag tells the giphy API that an image was tagged by a
+// user we know to be human.
 func ConfirmTag(c *http.Client, tag, img string) error {
+	url := genGiphyURL("confirm", "i="+img+"&q="+tag)
+
+	if err := makeGiphyCall(c, url, "PUT", nil); err != nil {
+		return err
+	}
+
 	return nil
 }

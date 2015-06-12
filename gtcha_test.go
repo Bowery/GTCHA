@@ -91,7 +91,7 @@ func TestToCaptcha(t *testing.T) {
 
 	n := 16
 	start = time.Now()
-	for range make([]struct{}, n) {
+	for i := 0; i < n; i++ {
 		g.toCaptcha(c, http.DefaultClient)
 	}
 	d3 := time.Since(start)
