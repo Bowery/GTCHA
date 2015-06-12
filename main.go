@@ -11,6 +11,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
+	"github.com/Bowery/gopackages/requests"
 	"github.com/Bowery/gopackages/web"
 
 	"appengine"
@@ -55,11 +56,11 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	// clean up origin domains
 	domains, err := parseDomains(r.PostForm["domain"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 	if len(domains) == 0 {
-		http.Error(w, "origins cannot be empty", http.StatusBadRequest)
+		requests.ErrorJSON(w, http.StatusBadRequest, requests.StatusFailed, "origins cannot be empty")
 		return
 	}
 
@@ -72,14 +73,14 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 		Domains: domains,
 	}
 	if _, err := datastore.Put(c, key, app); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(app)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
@@ -100,40 +101,39 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 	httpC := urlfetch.Client(c)
 	g, err := newGtcha(httpC)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 	captcha, err := g.toCaptcha(c, httpC)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 	if err = SaveGtcha(c, g, captcha.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(captcha)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
 
 func verifySession(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
 	if err := verifyRequest(c, r); err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		requests.ErrorJSON(w, http.StatusUnauthorized, requests.StatusFailed, err.Error())
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
@@ -141,18 +141,19 @@ func verifySession(w http.ResponseWriter, r *http.Request) {
 	tag := r.PostForm.Get("tag")
 	in := r.PostForm["in"]
 	if len(in) == 0 {
+		requests.ErrorJSON(w, http.StatusBadRequest, requests.StatusFailed, "no images selected")
 		http.Error(w, "no images selected", http.StatusBadRequest)
 		return
 	}
 
 	g, err := GetGtcha(c, id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
 	if tag != g.Tag {
-		http.Error(w, "tag incorrect for given id", http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, "tag incorrect for given id")
 		return
 	}
 
@@ -169,12 +170,12 @@ func isVerified(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
 	if err := verifyRequest(c, r); err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		requests.ErrorJSON(w, http.StatusUnauthorized, requests.StatusFailed, err.Error())
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
@@ -182,14 +183,14 @@ func isVerified(w http.ResponseWriter, r *http.Request) {
 
 	g, err := GetGtcha(c, r.PostForm.Get("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(verificationResponse{g.IsHuman})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
@@ -211,7 +212,7 @@ func dummyGetHandler(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(c)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
 		return
 	}
 
