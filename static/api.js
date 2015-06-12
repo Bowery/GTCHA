@@ -10,7 +10,6 @@ window.onload = function () {
 
   window.addEventListener('message', function (e) {
     if (e.data[0] == 'setHeight') {
-      console.log(e.data[1])
       iframe.style.height = e.data[1] + 'px'
     }
   })
