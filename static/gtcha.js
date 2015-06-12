@@ -70,9 +70,9 @@ Gtcha.prototype.onResponse = function (res) {
   for (var i = 0; i < this._data.images.length; i++) {
     var gif = this._data.images[i]
     optionsEl.innerHTML += '\
-      <div class="option" data-id="' + gif + '">\
+      <div class="option" data-id="' + gif.id + '">\
         <div class="mask"></div>\
-        <img src="' + gif + '">\
+        <img src="' + gif.uri + '">\
       </div>'
   }
 
