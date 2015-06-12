@@ -7,6 +7,7 @@ package gtcha
 import (
 	"bytes"
 	"errors"
+	"math/rand"
 	"net/http"
 	"sync"
 
@@ -242,7 +243,7 @@ func (g *gtcha) toCaptcha(c appengine.Context, httpC *http.Client) (*Captcha, er
 		close(imgCh)
 	}()
 
-	imgs := make([]GImg, 0, n)
+	imgs := make([]*GImg, 0, n)
 LOOP:
 	for {
 		select {
@@ -254,14 +255,20 @@ LOOP:
 			if !ok {
 				break LOOP
 			}
-			imgs = append(imgs, *img)
+			imgs = append(imgs, img)
 		}
+	}
+
+	imgsShuf := make([]GImg, n)
+	perm := rand.Perm(n)
+	for i, idx := range perm {
+		imgsShuf[i] = *imgs[idx]
 	}
 
 	captcha := &Captcha{
 		ID:     uuid.New(),
 		Tag:    g.Tag,
-		Images: imgs,
+		Images: imgsShuf,
 	}
 
 	return captcha, nil
