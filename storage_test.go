@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"code.google.com/p/appengine-go/appengine/aetest"
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/pborman/uuid"
 
 	"appengine/datastore"
 	"appengine/memcache"

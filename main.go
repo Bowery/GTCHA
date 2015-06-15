@@ -9,10 +9,9 @@ import (
 	"errors"
 	"net/http"
 
-	"code.google.com/p/go-uuid/uuid"
-
 	"github.com/Bowery/gopackages/requests"
 	"github.com/Bowery/gopackages/web"
+	"github.com/pborman/uuid"
 
 	"appengine"
 	"appengine/datastore"

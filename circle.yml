@@ -6,8 +6,8 @@ dependencies:
     - ln -s -f $HOME/go_appengine/goroot/src/appengine* /usr/local/go/src/
     - mkdir -p $HOME/.go_workspace/src/github.com/Bowery
     - cp -r $HOME/GTCHA/ $HOME/.go_workspace/src/github.com/Bowery/
-    - go get -u code.google.com/p/{go-uuid/uuid,appengine-go/appengine/aetest}
-    - go get -u github.com/{gorilla/{mux,websocket},jeffchao/backoff,stathat/go,unrolled/render}
+    - go get -u code.google.com/p/appengine-go/appengine/aetest
+    - go get -u github.com/{gorilla/{mux,websocket},jeffchao/backoff,stathat/go,unrolled/render,pborman/uuid}
 test:
   override:
     - git clone git@github.com:Bowery/gopackages /home/ubuntu/.go_workspace/src/github.com/Bowery/gopackages
