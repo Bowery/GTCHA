@@ -90,7 +90,7 @@ Gtcha.prototype.onCheckboxClick = function (e) {
   this._el.querySelector('label').innerHTML = this._data.tag
   this._el.className = 'gtcha active'
   this._el.style.transitionDelay = '0s'
-  this.updateHeight(376)
+  this.updateHeight(300)
 }
 
 /**
