@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/Bowery/GTCHA/giphy"
 	"github.com/pborman/uuid"
 
 	"appengine"
@@ -61,7 +60,7 @@ type gimg struct {
 // newGtcha returns the internal representation of the GIF captcha.
 // This function works by making a lot of API calls in parrallel.
 func newGtcha(c *http.Client) (*gtcha, error) {
-	tag, err := giphy.GetTag(c)
+	tag, err := GetTag(c)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +76,7 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 
 	// closes over some variables, so that we can get all the imges in parrallel
 	processImages := func(
-		fn func(*http.Client, string, int) ([]*giphy.Image, error),
+		fn func(*http.Client, string, int) ([]*Image, error),
 	) []gimg {
 		apiImgs, err := fn(c, tag, 0)
 		if err != nil {
@@ -99,17 +98,17 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	wg.Add(3)
 
 	go func() {
-		in = processImages(giphy.GetImagesTagged)
+		in = processImages(GetImagesTagged)
 		wg.Done()
 	}()
 
 	go func() {
-		out = processImages(giphy.GetImagesNotTagged)
+		out = processImages(GetImagesNotTagged)
 		wg.Done()
 	}()
 
 	go func() {
-		maybe = processImages(giphy.GetImagesMaybeTagged)
+		maybe = processImages(GetImagesMaybeTagged)
 		wg.Done()
 	}()
 
@@ -157,7 +156,7 @@ func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
 	for _, img := range in {
 		go func(img string) {
 			if isImageIn(g.Maybe, img) {
-				giphy.ConfirmTag(c, g.Tag, img)
+				ConfirmTag(c, g.Tag, img)
 			}
 		}(img)
 	}
