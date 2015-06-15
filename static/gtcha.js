@@ -71,10 +71,7 @@ Gtcha.prototype.onResponse = function (res) {
   for (var i = 0; i < this._data.images.length; i++) {
     var gif = this._data.images[i]
     optionsEl.innerHTML += '\
-      <div class="option" data-id="' + gif.id + '">\
-        <div class="mask"></div>\
-        <img src="' + gif.uri + '">\
-      </div>'
+      <div class="option" data-id="' + gif.id + '" style="background-image: url(' + gif.uri + ')"></div>'
   }
 
   var options = this._el.querySelectorAll('.option')
@@ -93,7 +90,7 @@ Gtcha.prototype.onCheckboxClick = function (e) {
   this._el.querySelector('label').innerHTML = this._data.tag
   this._el.className = 'gtcha active'
   this._el.style.transitionDelay = '0s'
-  this.updateHeight(346)
+  this.updateHeight(376)
 }
 
 /**
@@ -101,7 +98,7 @@ Gtcha.prototype.onCheckboxClick = function (e) {
  * @param {MouseEvent}
  */
 Gtcha.prototype.onGifSelect = function (e) {
-  var el = e.target.parentNode
+  var el = e.target
   el.className == 'option selected'
   ? el.className = 'option'
   : el.className = 'option selected'

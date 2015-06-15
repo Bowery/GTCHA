@@ -11,9 +11,8 @@ import (
 	"net/http"
 	"sync"
 
-	"code.google.com/p/go-uuid/uuid"
-
 	"github.com/Bowery/GTCHA/giphy"
+	"github.com/pborman/uuid"
 
 	"appengine"
 )
