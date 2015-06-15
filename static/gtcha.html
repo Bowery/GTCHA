@@ -10,6 +10,7 @@
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
+  -webkit-backface-visibility: hidden;
 }
 
 body {
@@ -189,15 +190,16 @@ form input[type="checkbox"] {
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center center;
-  transition: 50ms opacity linear;
+  border: 0 solid white;
+  transition: 50ms border-width linear;
 }
 
 .options .option:hover {
   cursor: pointer;
-  opacity: 0.8;
+  border-width: 4px;
 }
 .options .option.selected {
-  opacity: 0.5;
+  border-width: 4px;
 }
 .options .option.selected:before {
   content: '\2714';
