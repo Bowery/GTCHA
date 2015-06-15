@@ -16,7 +16,10 @@ import (
 	"appengine"
 )
 
-const gifType = "image/gif"
+const (
+	gifType = "image/gif"
+	imgsIn  = 2
+)
 
 // GtchaApp represents an app that is using our GIF captcha.
 type GtchaApp struct {
@@ -78,13 +81,13 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	processImages := func(
 		fn func(*http.Client, string, int) ([]*Image, error),
 	) []gimg {
-		apiImgs, err := fn(c, tag, 0)
+		apiImgs, err := fn(c, tag, imgsIn)
 		if err != nil {
 			errOnce.Do(func() { errCh <- err })
 			return nil
 		}
-		imgs := make([]gimg, len(apiImgs))
-		for i, img := range apiImgs[:2] {
+		imgs := make([]gimg, imgsIn)
+		for i, img := range apiImgs {
 			imgs[i] = gimg{
 				ID:   uuid.New(),
 				GID:  img.ID,
@@ -151,8 +154,8 @@ func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
 		return false
 	}
 
-	// check the images that might be tagged g's tag against the user's submitted images
-	// to let the giphy API know that a human verified the tag
+	// check the images that might be tagged g's tag against the user's
+	// submitted images to let the giphy API know that a human verified the tag
 	for _, img := range in {
 		go func(img string) {
 			if isImageIn(g.Maybe, img) {

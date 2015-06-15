@@ -231,42 +231,16 @@ func isVerified(w http.ResponseWriter, r *http.Request) {
 }
 
 func dummyGetHandler(w http.ResponseWriter, r *http.Request) {
-	g := &gtcha{
-		Tag: "cute puppy",
-		In: []gimg{
-			gimg{
-				"in_1", "DgzJFvt6StyFi",
-				"http://media0.giphy.com/media/DgzJFvt6StyFi/100w.gif",
-			},
-			gimg{
-				"in_2", "13OWYvLosSoK2I",
-				"http://media0.giphy.com/media/13OWYvLosSoK2I/100w.gif",
-			},
-		},
-		Out: []gimg{
-			gimg{
-				"out_1", "14f3BPP6SCc0Mw",
-				"http://media1.giphy.com/media/14f3BPP6SCc0Mw/100w.gif",
-			},
-			gimg{
-				"out_2", "OrkjamOz6caA0",
-				"http://media0.giphy.com/media/OrkjamOz6caA0/100w.gif",
-			},
-		},
-		Maybe: []gimg{
-			gimg{
-				"maybe_1", "K2BQcrA30rUMU",
-				"http://media0.giphy.com/media/K2BQcrA30rUMU/100w.gif",
-			},
-			gimg{
-				"maybe_2", "f4i4IpVQVhtu0",
-				"http://media4.giphy.com/media/f4i4IpVQVhtu0/100w.gif",
-			},
-		},
-	}
-
 	c := appengine.NewContext(r)
 	httpC := urlfetch.Client(c)
+
+	g, err := newGtcha(httpC)
+	if err != nil {
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
+		return
+	}
 
 	captcha, err := g.toCaptcha(c, httpC)
 	if err != nil {

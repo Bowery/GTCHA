@@ -38,7 +38,10 @@ func makeGiphyCall(c *http.Client, url, method string, out interface{}) error {
 		if err != nil {
 			return errors.New("giphy API error")
 		}
+
 		return errors.New("giphy API error " + string(buf))
+
+		// TODO(r-medina): decode json and look for error
 	}
 
 	if out == nil {
@@ -55,39 +58,41 @@ func makeGiphyCall(c *http.Client, url, method string, out interface{}) error {
 
 // GetTag gets a random tag from the giphy API.
 func GetTag(c *http.Client) (string, error) {
-	url := genGiphyURL("tag/random", "")
-	res := new(tagResult)
-	if err := makeGiphyCall(c, url, "GET", res); err != nil {
-		return "", err
-	}
+	return "dog", nil
 
-	return res.Data, nil
+	// url := genGiphyURL("tag/random", "")
+	// res := new(tagResult)
+	// if err := makeGiphyCall(c, url, "GET", res); err != nil {
+	// 	return "", err
+	// }
+
+	// return res.Data, nil
 }
 
 // GetOtherTag gets a tag that isn't `tag` from the giphyAPI.
 func GetOtherTag(c *http.Client, tag string) (string, error) {
-	i := 0
-	otag := tag
-	for otag == tag {
-		var err error
-		otag, err = GetTag(c)
-		if err != nil {
-			return "", err
-		}
-		i++
-		if i == 5 {
-			return "", errors.New("could not get new tag")
-		}
-	}
+	return "weasel", nil
 
-	return otag, nil
+	// i := 0
+	// otag := tag
+	// for otag == tag {
+	// 	var err error
+	// 	otag, err = GetTag(c)
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
+	// 	i++
+	// 	if i == 5 {
+	// 		return "", errors.New("could not get new tag")
+	// 	}
+	// }
+
+	// return otag, nil
 }
 
 // GetImagesTagged returns a slice of images that definitely match `tag`.
-func GetImagesTagged(c *http.Client, tag string, page int) ([]*Image, error) {
-	// TODO(r-medina): add pagination
-
-	url := genGiphyURL("gifs/search", "q="+tag)
+func GetImagesTagged(c *http.Client, tag string, n int) ([]*Image, error) {
+	url := genGiphyURL("gifs/search", fmt.Sprintf("q=%s&limit=%d", tag, n))
 	res := new(searchResult)
 	if err := makeGiphyCall(c, url, "GET", res); err != nil {
 		return nil, err
@@ -97,18 +102,19 @@ func GetImagesTagged(c *http.Client, tag string, page int) ([]*Image, error) {
 }
 
 // GetImagesNotTagged gets images that do not match a specified tag.
-func GetImagesNotTagged(c *http.Client, tag string, page int) ([]*Image, error) {
+func GetImagesNotTagged(c *http.Client, tag string, n int) ([]*Image, error) {
 	otag, err := GetOtherTag(c, tag)
 	if err != nil {
 		return nil, err
 	}
 
-	return GetImagesTagged(c, otag, page)
+	return GetImagesTagged(c, otag, n)
 }
 
 // GetImagesMaybeTagged returns images that *might* match `tag`.
-func GetImagesMaybeTagged(c *http.Client, tag string, page int) ([]*Image, error) {
-	url := genGiphyURL("gifs/search", "maybe="+tag)
+func GetImagesMaybeTagged(c *http.Client, tag string, n int) ([]*Image, error) {
+	// url := genGiphyURL("gifs/search", fmt.Sprintf("maybe=%s&limit=%d", tag, n))
+	url := genGiphyURL("gifs/search", fmt.Sprintf("q=%s&limit=%d", "ferret", n))
 	res := new(searchResult)
 	if err := makeGiphyCall(c, url, "GET", res); err != nil {
 		return nil, err
