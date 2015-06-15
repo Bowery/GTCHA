@@ -1,4 +1,4 @@
-package giphy
+package GTCHA
 
 import (
 	"encoding/json"
@@ -31,7 +31,7 @@ func makeGiphyCall(c *http.Client, url, method string, out interface{}) error {
 	if err != nil {
 		return err
 	}
-	res.Body.Close()
+	defer res.Body.Close()
 
 	if res.StatusCode >= 400 {
 		buf, err := ioutil.ReadAll(res.Body)
@@ -85,6 +85,8 @@ func GetOtherTag(c *http.Client, tag string) (string, error) {
 
 // GetImagesTagged returns a slice of images that definitely match `tag`.
 func GetImagesTagged(c *http.Client, tag string, page int) ([]*Image, error) {
+	// TODO(r-medina): add pagination
+
 	url := genGiphyURL("gifs/search", "q="+tag)
 	res := new(searchResult)
 	if err := makeGiphyCall(c, url, "GET", res); err != nil {
