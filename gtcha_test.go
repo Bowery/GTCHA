@@ -50,7 +50,27 @@ var img = gimg{
 	"in_1", "DgzJFvt6StyFi", "http://media0.giphy.com/media/DgzJFvt6StyFi/100w.gif",
 }
 
-func TestNewGtcha(t *testing.T) { t.Log("TODO") }
+func TestNewGtcha(t *testing.T) {
+	c, err := aetest.NewContext(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+
+	start := time.Now()
+	g, err := newGtcha(http.DefaultClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = g.toCaptcha(c, http.DefaultClient)
+	d := time.Since(start)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("total time: %v", d)
+}
 
 func TestVerifyGtcha(t *testing.T) {
 	in := []string{"out_1"}
