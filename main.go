@@ -2,7 +2,7 @@
 // HTTP endpoints
 //
 
-package gtcha
+package GTCHA
 
 import (
 	"encoding/json"
@@ -56,11 +56,15 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 	// clean up origin domains
 	domains, err := parseDomains(r.PostForm["domain"])
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 	if len(domains) == 0 {
-		requests.ErrorJSON(w, http.StatusBadRequest, requests.StatusFailed, "origins cannot be empty")
+		requests.ErrorJSON(
+			w, http.StatusBadRequest, requests.StatusFailed, "origins cannot be empty",
+		)
 		return
 	}
 
@@ -73,14 +77,18 @@ func registerApp(w http.ResponseWriter, r *http.Request) {
 		Domains: domains,
 	}
 	if _, err := datastore.Put(c, key, app); err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(app)
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
@@ -96,28 +104,37 @@ func getCaptcha(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO(r-medina): cache captchas and get from a cache instead of generating each time
+	// TODO(r-medina): cache captchas and get from a cache
+	// instead of generating each time
 
 	httpC := urlfetch.Client(c)
 	g, err := newGtcha(httpC)
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 	captcha, err := g.toCaptcha(c, httpC)
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 	if err = SaveGtcha(c, g, captcha.ID); err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(captcha)
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
@@ -128,12 +145,16 @@ func verifySession(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
 	if err := verifyRequest(c, r); err != nil {
-		requests.ErrorJSON(w, http.StatusUnauthorized, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusUnauthorized, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
@@ -141,19 +162,26 @@ func verifySession(w http.ResponseWriter, r *http.Request) {
 	tag := r.PostForm.Get("tag")
 	in := r.PostForm["in"]
 	if len(in) == 0 {
-		requests.ErrorJSON(w, http.StatusBadRequest, requests.StatusFailed, "no images selected")
+		requests.ErrorJSON(
+			w, http.StatusBadRequest, requests.StatusFailed, "no images selected",
+		)
 		http.Error(w, "no images selected", http.StatusBadRequest)
 		return
 	}
 
 	g, err := GetGtcha(c, id)
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
 	if tag != g.Tag {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, "tag incorrect for given id")
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError,
+			requests.StatusFailed, "tag incorrect for given id",
+		)
 		return
 	}
 
@@ -170,27 +198,33 @@ func isVerified(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
 	if err := verifyRequest(c, r); err != nil {
-		requests.ErrorJSON(w, http.StatusUnauthorized, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusUnauthorized, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
-	// TODO(r-medina): abstract out everything above this
-
 	g, err := GetGtcha(c, r.PostForm.Get("id"))
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(verificationResponse{g.IsHuman})
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
@@ -201,16 +235,34 @@ func dummyGetHandler(w http.ResponseWriter, r *http.Request) {
 	g := &gtcha{
 		Tag: "cute puppy",
 		In: []gimg{
-			gimg{"in_1", "DgzJFvt6StyFi", "http://media0.giphy.com/media/DgzJFvt6StyFi/100w.gif"},
-			gimg{"in_2", "13OWYvLosSoK2I", "http://media0.giphy.com/media/13OWYvLosSoK2I/100w.gif"},
+			gimg{
+				"in_1", "DgzJFvt6StyFi",
+				"http://media0.giphy.com/media/DgzJFvt6StyFi/100w.gif",
+			},
+			gimg{
+				"in_2", "13OWYvLosSoK2I",
+				"http://media0.giphy.com/media/13OWYvLosSoK2I/100w.gif",
+			},
 		},
 		Out: []gimg{
-			gimg{"out_1", "14f3BPP6SCc0Mw", "http://media1.giphy.com/media/14f3BPP6SCc0Mw/100w.gif"},
-			gimg{"out_2", "OrkjamOz6caA0", "http://media0.giphy.com/media/OrkjamOz6caA0/100w.gif"},
+			gimg{
+				"out_1", "14f3BPP6SCc0Mw",
+				"http://media1.giphy.com/media/14f3BPP6SCc0Mw/100w.gif",
+			},
+			gimg{
+				"out_2", "OrkjamOz6caA0",
+				"http://media0.giphy.com/media/OrkjamOz6caA0/100w.gif",
+			},
 		},
 		Maybe: []gimg{
-			gimg{"maybe_1", "K2BQcrA30rUMU", "http://media0.giphy.com/media/K2BQcrA30rUMU/100w.gif"},
-			gimg{"maybe_2", "f4i4IpVQVhtu0", "http://media4.giphy.com/media/f4i4IpVQVhtu0/100w.gif"},
+			gimg{
+				"maybe_1", "K2BQcrA30rUMU",
+				"http://media0.giphy.com/media/K2BQcrA30rUMU/100w.gif",
+			},
+			gimg{
+				"maybe_2", "f4i4IpVQVhtu0",
+				"http://media4.giphy.com/media/f4i4IpVQVhtu0/100w.gif",
+			},
 		},
 	}
 
@@ -219,14 +271,18 @@ func dummyGetHandler(w http.ResponseWriter, r *http.Request) {
 
 	captcha, err := g.toCaptcha(c, httpC)
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(captcha)
 	if err != nil {
-		requests.ErrorJSON(w, http.StatusInternalServerError, requests.StatusFailed, err.Error())
+		requests.ErrorJSON(
+			w, http.StatusInternalServerError, requests.StatusFailed, err.Error(),
+		)
 		return
 	}
 

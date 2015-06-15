@@ -1,4 +1,4 @@
-package gtcha
+package GTCHA
 
 import (
 	"os"

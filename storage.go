@@ -2,7 +2,7 @@
 // appengine datastore and memcache logic
 //
 
-package gtcha
+package GTCHA
 
 import (
 	"encoding/json"
