@@ -2,7 +2,7 @@
 // gitcha application logic
 //
 
-package gtcha
+package GTCHA
 
 import (
 	"bytes"
@@ -11,10 +11,11 @@ import (
 	"net/http"
 	"sync"
 
-	"code.google.com/p/appengine-go/appengine"
 	"code.google.com/p/go-uuid/uuid"
 
-	"github.com/Bowery/gtcha/giphy"
+	"github.com/Bowery/GTCHA/giphy"
+
+	"appengine"
 )
 
 const gifType = "image/gif"
@@ -76,13 +77,16 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 	)
 
 	// closes over some variables, so that we can get all the imges in parrallel
-	processImages := func(fn func(*http.Client, string, int) ([]*giphy.Image, error)) []gimg {
+	processImages := func(
+		fn func(*http.Client, string, int) ([]*giphy.Image, error),
+	) []gimg {
 		apiImgs, err := fn(c, tag, 0)
 		if err != nil {
 			errOnce.Do(func() { errCh <- err })
+			return nil
 		}
 		imgs := make([]gimg, len(apiImgs))
-		for i, img := range apiImgs {
+		for i, img := range apiImgs[:2] {
 			imgs[i] = gimg{
 				ID:   uuid.New(),
 				GID:  img.ID,
@@ -112,7 +116,7 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 
 	go func() {
 		wg.Wait()
-		errOnce.Do(func() { errCh <- nil })
+		close(errCh)
 	}()
 
 	err = <-errCh
@@ -164,11 +168,10 @@ func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
 
 func (img *gimg) toGImg(c appengine.Context, httpC *http.Client) (*GImg, error) {
 	gotten := false
-	var mtx sync.Mutex
+	wait := make(chan struct{})
 
 	f1 := func() interface{} {
-		mtx.Lock()
-		defer mtx.Unlock()
+		defer close(wait)
 		uri, err := GetImageURI(c, img.GID)
 		if err != nil {
 			return nil
@@ -179,12 +182,10 @@ func (img *gimg) toGImg(c appengine.Context, httpC *http.Client) (*GImg, error) 
 	}
 
 	f2 := func() (interface{}, error) {
-		mtx.Lock()
+		<-wait
 		if gotten {
-			mtx.Unlock()
 			return nil, errors.New("done")
 		}
-		mtx.Unlock()
 
 		req, err := http.NewRequest("GET", img.GURI, nil)
 		if err != nil {
@@ -251,9 +252,7 @@ LOOP:
 	for {
 		select {
 		case err := <-errCh:
-			if err != nil {
-				return nil, err
-			}
+			return nil, err // guaranteed to not be nil
 		case img, ok := <-imgCh:
 			if !ok {
 				break LOOP

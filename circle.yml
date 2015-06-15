@@ -3,9 +3,12 @@ dependencies:
     - curl -o $HOME/go_appengine_sdk_linux_amd64-1.9.21.zip https://storage.googleapis.com/appengine-sdks/featured/go_appengine_sdk_linux_amd64-1.9.21.zip
     - unzip -q -d $HOME $HOME/go_appengine_sdk_linux_amd64-1.9.21.zip
     - echo "export PATH=$PATH:$HOME/go_appengine/" >> /home/ubuntu/.bashrc
-    - mkdir -p $HOME/.go_workspace/src/google.golang.org
-    - rm -rf $HOME/.go_workspace/src/google.golang.org/appengine
-    - ln -s -f $HOME/go_appengine/goroot/src/appengine $HOME/.go_workspace/src/google.golang.org/
+    - ln -s -f $HOME/go_appengine/goroot/src/appengine* /usr/local/go/src/
+    - mkdir -p $HOME/.go_workspace/src/github.com/Bowery
+    - cp -r $HOME/GTCHA/ $HOME/.go_workspace/src/github.com/Bowery/
+    - go get -u code.google.com/p/{go-uuid/uuid,appengine-go/appengine/aetest}
+    - go get -u github.com/{gorilla/{mux,websocket},jeffchao/backoff,stathat/go,unrolled/render}
 test:
   override:
-    - goapp test
+    - git clone git@github.com:Bowery/gopackages /home/ubuntu/.go_workspace/src/github.com/Bowery/gopackages
+    - cd $HOME/.go_workspace/src/github.com/Bowery/GTCHA && goapp test

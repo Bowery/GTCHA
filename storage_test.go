@@ -1,4 +1,4 @@
-package gtcha
+package GTCHA
 
 import (
 	"encoding/json"
@@ -42,7 +42,8 @@ func TestGetApp(t *testing.T) {
 
 	if retApp.Secret != app.Secret {
 		t.Fatalf(
-			"returned app differs from expected app:\nreturned %#v\nexpected %#v", retApp, app,
+			"returned app differs from expected app:\nreturned %#v\nexpected %#v",
+			retApp, app,
 		)
 	}
 }

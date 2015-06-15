@@ -2,7 +2,7 @@
 // utility functions for parsing domains from user input
 //
 
-package gtcha
+package GTCHA
 
 import (
 	"encoding/base64"
