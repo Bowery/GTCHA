@@ -133,13 +133,15 @@ func newGtcha(c *http.Client) (*gtcha, error) {
 func verifyGtcha(c *http.Client, g *gtcha, in []string) bool {
 	n := len(g.In)
 	correctSelections := 0
+	found := make(map[string]bool) // for making sure duplicates aren't sent
 	for _, img := range in {
 		if isImageIn(g.Out, img) {
 			return false
 		}
 
-		if isImageIn(g.In, img) {
+		if isImageIn(g.In, img) && !found[img] {
 			correctSelections++
+			found[img] = true
 		}
 	}
 
