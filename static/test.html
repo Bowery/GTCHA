@@ -10,3 +10,12 @@
   <div class="gtcha" data-key="your_site_key"></div>
   <input type="submit" value="Submit" />
 </form>
+<script>
+var formEl = document.querySelector('form')
+formEl.onsubmit = function (e) {
+  e.preventDefault()
+  var success = gtcha.getResponse()
+  if (success)
+    alert('Success!')
+}
+</script>
