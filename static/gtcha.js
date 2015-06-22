@@ -34,6 +34,7 @@ Gtcha.prototype.init = function () {
 
   this.updateHeight(84)
   this.fetch()
+  window.addEventListener('message', this.onResetRequest.bind(this))
 
   this._el.querySelector('input[type="checkbox"]').onclick = this.onCheckboxClick.bind(this)
   this._el.querySelector('form').onsubmit = this.onSubmitClick.bind(this)
@@ -146,13 +147,44 @@ Gtcha.prototype.onSubmitResponse = function (res) {
     return
   }
 
+
   this._el.className = 'gtcha'
   this._el.querySelector('label').innerHTML = 'All good.'
   this.updateHeight(84)
+  this.updateResponse(true)
 }
 
+/**
+ * updateHeight updates the height of the parent iframe.
+ * @param {Number} height
+ */
 Gtcha.prototype.updateHeight = function (height) {
   window.parent.postMessage(['setHeight', height], '*')
+}
+
+/**
+ * updateResponse updates the response (true|false).
+ * @param {Boolean} response
+ */
+Gtcha.prototype.updateResponse = function (response) {
+  window.parent.postMessage(['setResponse', response], '*')
+}
+
+/**
+ * onResetRequest handles reset request from parent window.
+ */
+Gtcha.prototype.onResetRequest = function () {
+  this.reset()
+}
+
+/**
+ * reset resets the GTCHA to it's initial state.
+ */
+Gtcha.prototype.reset = function () {
+  this._data = null
+  this._el.className = 'gtcha'
+  this._el.querySelector('label').innerHTML = 'I\'m Human.'
+  this.updateHeight(84)
 }
 
 /**
