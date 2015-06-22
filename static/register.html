@@ -2,11 +2,38 @@
 <head>
 <title>Register</title>
 <script src="/static/register.js" async defer></script>
+<style>
+label, input {
+  display: block;
+}
+.embed-code {
+  display: none;
+}
+.embed-code.active {
+  display: block;
+}
+.embed-code textarea {
+  resize: none;
+  width: 440px;
+  padding: 10px;
+  height: 15px;
+  border: 1px solid #ddd;
+  outline: none;
+}
+</style>
 </head>
 <body>
   <form method="POST">
-    Name <input id="name" type="text" placeholder="hotApp" required />
-    Origins <input id="domains" type="text" placeholder="hotApp.io, dev.hotApp.io" required />
+    <label for="name">Name</label>
+    <input id="name" type="text" placeholder="hotApp" required />
+    <label for="domains">Origins</label>
+    <input id="domains" type="text" placeholder="hotApp.io, dev.hotApp.io" required />
     <input type="submit" value="Submit" />
   </form>
+  <div class="embed-code">
+    <p>Place the GTCHA's JavaScript dependency at the top of the HTML document you wish to include it in.</p>
+    <textarea class="embed-script"></textarea>
+    <p>Place the GTCHA where you would like it in the HTML document.</p>
+    <textarea class="embed-html"></textarea>
+  </div>
 </body>
